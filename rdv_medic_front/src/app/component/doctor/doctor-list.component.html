@@ -1,0 +1,29 @@
+<!-- Liste des médecins -->
+<!-- Liste des médecins -->
+
+@if (!loading && !errorMessage) {
+<ul>
+
+  @for (medecin of doctors; track medecin.id) {
+  <li (click)="goToDoctorSlots(medecin)">
+    <strong>{{ medecin.firstName }} {{ medecin.lastName }}</strong> - {{ medecin.speciality }}
+  </li>
+
+  }
+</ul>
+
+}
+
+<!-- Indicateur de chargement -->
+
+@if (loading) {
+<div class="loading">Chargement des données...</div>
+
+}
+
+<!-- Message d'erreur -->
+
+@if (errorMessage) {
+<div class="error">{{ errorMessage }}</div>
+
+}

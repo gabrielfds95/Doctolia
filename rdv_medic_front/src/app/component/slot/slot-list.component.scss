@@ -1,0 +1,225 @@
+.calendar-container {
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: #f9f9f9;
+}
+
+.week-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+
+  button {
+    background-color: #007aff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+
+    &:hover {
+      background-color: #005ecb;
+    }
+  }
+
+  span {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(5, 1fr); // 1 colonne pour les heures + 5 jours
+  border: 1px solid #ddd;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.grid-header {
+  display: contents; // Permet de garder la grille intacte
+}
+
+.day-cell {
+  padding: 1rem;
+  text-align: center;
+  background-color: #f0f4ff;
+  border-bottom: 1px solid #ddd;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.time-cell {
+  padding: 0.5rem;
+  text-align: center;
+  background-color: #f0f0f0;
+  border-right: 1px solid #ddd;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+ .time-cell.lunch {
+  background-color: #cfcdcd;
+  color: #0c0c0c;
+  cursor: not-allowed;
+  }
+
+.grid-row {
+  display: contents;
+}
+
+.slot-cell {
+  padding: 0.5rem;
+  border: 1px solid #e0e0e0;
+  background-color: #e6f0ff; // bleu clair pour dispo
+  cursor: pointer;
+  text-align: center;
+  font-size: 0.85rem;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #cce4ff;
+  }
+
+  &.taken {
+    background-color: #007aff; // bleu foncé pour réservé
+    color: white;
+    cursor: not-allowed;
+  }
+
+  &:disabled {
+    pointer-events: none;
+  }
+}
+
+ .slot-cell.lunch {
+  background-color: #cfcdcd;
+  color: #888;
+  cursor: not-allowed;
+  }
+.form-container {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+}
+.confirmation {
+  margin-top: 10px;
+  color: green;
+  font-weight: bold;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); // fond semi-transparent
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-form {
+  background: #3498db;
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-form h3 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modal-form label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.modal-form input {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: none;
+  font-size: 1rem;
+}
+
+.submit-button {
+  background: white;
+  color: #3498db;
+  font-weight: bold;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  margin-top: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+
+  &:hover {
+    background: #ecf0f1;
+    transform: translateY(-2px);
+  }
+}
+
+
+.confirmation-message {
+  margin: 2rem auto;
+  text-align: center;
+  color: #2ecc71;
+  font-weight: 600;
+  font-size: 1.2rem;
+  background: #ecf0f1;
+  padding: 1rem;
+  border-radius: 8px;
+  max-width: 400px;
+  position: relative;
+}
+
+.progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: #2ecc71;
+  animation: progressAnimation 2s linear forwards;
+  width: 100%;
+}
+
+@keyframes progressAnimation {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+
+.close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: white;
+  cursor: pointer;
+
+  &:hover {
+    color: #ecf0f1;
+  }
+}
