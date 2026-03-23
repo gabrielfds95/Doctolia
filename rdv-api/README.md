@@ -508,6 +508,106 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
 
 ---
 
+## 📁 Guide des fichiers complexes
+
+### `model/User.java`
+Classe parente de toutes les entités utilisateurs. Utilise la stratégie d'héritage JPA **JOINED** : une table `users` contient les colonnes communes (id, username, email, password, firstName, lastName, enabled, roles, createdAt), et chaque sous-type a sa propre table jointe.
+
+Points critiques :
+- `@SuperBuilder` de Lombok (obligatoire — `@Builder` classique génère un conflit avec les sous-classes).
+- `@DiscriminatorColumn(name = "user_type")` — valeur `'DOCTOR'` ou `'PATIENT'` insérée automatiquement.
+- `@ManyToMany(fetch = EAGER)` sur `roles` → nécessaire pour Spring Security qui lit les rôles à chaque requête.
+- `@PreUpdate` → met à jour `updatedAt` automatiquement.
+
+### `model/Doctor.java` et `model/Patient.java`
+Entités filles héritant de `User`. Chacune a sa propre table (`doctors`, `patients`) reliée via la clé primaire partagée.
+- `@SuperBuilder` obligatoire (même annotation que la classe parente, sinon erreur `builder() cannot hide builder()`).
+- `Doctor` ajoute : speciality, licenseNumber, department, experienceYears + liste de `Slot`.
+- `Patient` ajoute : ssn, phoneNumber, address, age + liste de `Slot`.
+
+---
+
+### `config/SecurityConfig.java`
+Configure toute la chaîne de sécurité Spring Security :
+
+- **Stateless** : pas de session HTTP — l'authentification repose entièrement sur le JWT à chaque requête.
+- **CORS** : autorise `localhost:4200` (Angular) et `localhost:8081` (futur mobile React Native).
+- **Règles d'autorisation** :
+  - `/login`, `/register`, `/h2-console/**` → publics
+  - `GET /doctors/**`, `GET /slots/**` → publics (lecture des médecins)
+  - `POST /slot/**` → réservé aux `ROLE_PATIENT`
+  - Tout le reste → authentifié
+- Insère `JwtAuthenticationFilter` **avant** le filtre standard Spring.
+
+---
+
+### `security/JwtTokenProvider.java`
+Responsable de la **génération** et **validation** des tokens JWT (JJWT 0.12.5).
+
+- Clé secrète et durée lues depuis `application.properties` (`app.jwt.secret`, `app.jwt.expiration`).
+- `generateToken()` : JWT signé HMAC-SHA avec `userId` et `roles` en claims custom.
+- `validateToken()` : retourne `false` si invalide ou expiré, sans lever d'exception vers le client.
+- `getUsernameFromToken()` : extrait le `subject` (username) pour charger l'utilisateur en base.
+
+---
+
+### `security/JwtAuthenticationFilter.java`
+Filtre exécuté **une fois par requête** (`OncePerRequestFilter`). Séquence :
+
+1. Extrait le token de `Authorization: Bearer <token>`.
+2. Valide via `JwtTokenProvider`.
+3. Charge l'utilisateur via `CustomUserDetailsService`.
+4. Injecte un `UsernamePasswordAuthenticationToken` dans le `SecurityContextHolder`.
+5. Passe la main au filtre suivant.
+
+Si le token est absent ou invalide, la requête continue sans authentification (Spring Security applique ses règles normalement).
+
+---
+
+### `security/CustomUserDetailsService.java`
+Implémente `UserDetailsService` (interface Spring Security). Unique rôle : charger un `User` depuis `UserRepository` par son username et le convertir en `UserPrincipal`. Appelé par le filtre JWT et par `AuthenticationManager` au login.
+
+---
+
+### `service/AuthService.java`
+Logique métier de l'authentification. Deux opérations :
+
+**`login()`** : délègue à `AuthenticationManager` → génère un JWT → retourne `AuthResponse`.
+
+**`register()`** :
+- Vérifie l'unicité du username et de l'email.
+- Selon `UserType` (`PATIENT` ou `DOCTOR`), crée l'entité correspondante avec mot de passe BCrypt.
+- Sauvegarde et génère immédiatement un JWT (connexion automatique après inscription).
+- La méthode privée `buildAuthResponse()` construit l'`Authentication` directement depuis l'entité sauvegardée, sans re-passer par le login.
+
+---
+
+### `dto/RegisterRequest.java`
+DTO d'entrée pour l'inscription. Champs communs obligatoires : `username`, `email`, `password` (min 8 chars), `firstName`, `lastName`, `userType`. Champs Patient optionnels : `ssn`, `phoneNumber`, `address`, `age`. Champs Doctor optionnels : `speciality`, `licenseNumber`, `department`, `experienceYears`.
+
+Annotations `@NotBlank`, `@Email`, `@Size` pour validation automatique via `@Valid`.
+
+---
+
+### `dto/DoctorDTO.java`, `dto/PatientDTO.java`, `dto/SlotDTO.java`
+Pattern DTO : les controllers ne retournent jamais les entités JPA directement (évite d'exposer les mots de passe hashés et les relations circulaires). Chaque DTO a une méthode `fromEntity()` avec null-check. Le mapping se fait au niveau du controller, les services restent inchangés.
+
+---
+
+### `exception/GlobalExceptionHandler.java`
+`@RestControllerAdvice` qui intercepte les exceptions et retourne une réponse JSON structurée :
+```json
+{ "timestamp": "...", "status": 404, "error": "Not Found", "message": "Médecin introuvable : 99" }
+```
+Gère : `ResourceNotFoundException` (404), `MethodArgumentNotValidException` (400), `ResponseStatusException`, et toute `Exception` générique (500).
+
+---
+
+### `config/DataInitializer.java`
+Initialise les données de démo au démarrage (`@EventListener(ApplicationReadyEvent.class)`) uniquement si la table `users` est vide. Crée 2 rôles, 2 médecins, 2 patients, 3 créneaux. Tous les mots de passe : BCrypt(`"password"`).
+
+---
+
 ## 📧 Support
 
 Pour toute question, consultez la documentation ou créez une issue.

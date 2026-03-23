@@ -1,23 +1,20 @@
-@if (selectedDoctor){
-  <h2>Créneaux du docteur {{ selectedDoctor.lastName }} - {{selectedDoctor.speciality}}</h2>
+@if (selectedDoctor) {
+  <h2>Créneaux du Dr {{ selectedDoctor.lastName }} — {{ selectedDoctor.speciality }}</h2>
 }
 
 <div class="calendar-container">
   @if (!loading && !errorMessage) {
 
-    <!-- Navigation entre les semaines -->
     <div class="week-navigation">
       <button (click)="previousWeek()">← Semaine précédente</button>
       <span>Semaine du {{ currentWeekStart | date: 'dd/MM/yyyy' }}</span>
       <button (click)="nextWeek()">Semaine suivante →</button>
     </div>
 
-    <!-- Grille du calendrier -->
     <div class="calendar-grid">
 
-      <!-- En-tête : jours de la semaine -->
       <div class="grid-header">
-        <div class="time-cell"></div> <!-- Cellule vide en haut à gauche -->
+        <div class="time-cell"></div>
         @for (day of weekDays; track day) {
           <div class="day-cell">
             <strong>{{ day | date: 'EEEE' }}</strong><br>
@@ -26,13 +23,9 @@
         }
       </div>
 
-      <!-- Corps du calendrier : heures + créneaux -->
       @for (hour of hours; track hour) {
         <div class="grid-row">
-          <!-- Colonne des heures -->
           <div class="time-cell" [class.lunch]="isLunchBreak(hour)">{{ hour }}</div>
-
-          <!-- Créneaux pour chaque jour à cette heure -->
           @for (day of weekDays; track day) {
             <button
               class="slot-cell"
@@ -46,68 +39,49 @@
         </div>
       }
 
-      <!-- Formulaire de réservation -->
-@if (selectedSlot) {
-  <div class="modal-overlay">
-    <div class="modal-form">
-      <!-- appel closeform quand on clique sur la croix -->
-      <button class="close-button" (click)="closeForm()">×</button>
+      @if (selectedSlot) {
+        <div class="modal-overlay">
+          <div class="modal-form">
+            <button class="close-button" (click)="closeForm()">×</button>
 
-      <h3>Réservation pour le {{ selectedSlot.day.toDateString() }} à {{ selectedSlot.hour }}</h3>
+            <h3>Réservation — {{ selectedSlot.day | date: 'dd/MM/yyyy' }} à {{ selectedSlot.hour }}</h3>
 
-      <form (submit)="submitForm($event)">
-        <label>
-          Nom :
-          <input type="text"
-                 [value]="formData.lastName"
-                 (input)="formData.lastName = $event.target.value"
-                 required />
-        </label>
-        <label>
-          Prénom :
-          <input type="text"
-                 [value]="formData.firstName"
-                 (input)="formData.firstName = $event.target.value"
-                 required />
-        </label>
-        <label>
-          Âge  :
-          <input type="number"
-                 [value]="formData.age"
-                 (input)="formData.age = $event.target.value"
-                 min="0"
-                 required />
-        </label>
-        
-        <label>
-          Email :
-          <input type="email"
-                 [value]="formData.email"
-                 (input)="formData.email = $event.target.value"
-                 required />
-        </label>
+            <p class="patient-info">
+              Patient : <strong>{{ authService.currentUser?.firstName }} {{ authService.currentUser?.lastName }}</strong>
+            </p>
 
-        <label>
-          Symptomes / Raison du rendez-vous :
-          <input type="string"
-                 [value]="formData.slotReason"
-                 (input)="formData.slotReason = $event.target.value"
-                 required />
-        </label>
+            <form (submit)="submitForm($event)">
+              <label>
+                Motif / Symptômes :
+                <input
+                  type="text"
+                  [value]="slotReason"
+                  (input)="slotReason = $any($event.target).value"
+                  placeholder="ex : Bilan annuel, douleurs..."
+                  required />
+              </label>
 
-        <button type="submit" class="submit-button">Valider</button>
-      </form>
-      
-      @if (confirmationMessage) {
-        <div class="confirmation-message">
-        {{ confirmationMessage }}
-        <div class="progress-bar"></div>
+              <button type="submit" class="submit-button">Confirmer le rendez-vous</button>
+            </form>
+
+            @if (confirmationMessage) {
+              <div class="confirmation-message">
+                {{ confirmationMessage }}
+                <div class="progress-bar"></div>
+              </div>
+            }
+          </div>
         </div>
       }
 
     </div>
-  </div>
-}
-    </div>
+  }
+
+  @if (loading) {
+    <div class="loading">Chargement des créneaux...</div>
+  }
+
+  @if (errorMessage) {
+    <div class="error">{{ errorMessage }}</div>
   }
 </div>

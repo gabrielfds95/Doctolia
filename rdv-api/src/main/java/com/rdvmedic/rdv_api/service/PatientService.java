@@ -29,11 +29,11 @@ public class PatientService {
         return patientRepository.save(patient);
     }
 
-    public Optional<Patient> getPatient(final int id) {
+    public Optional<Patient> getPatient(final Long id) {
         return patientRepository.findById(id);
     }
 
-    public void deletePatient(final int id) {
+    public void deletePatient(final Long id) {
         patientRepository.deleteById(id);
     }
 

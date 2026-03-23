@@ -37,11 +37,11 @@ public class Slot {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", nullable = false)
-    @JsonIgnoreProperties({"slots", "roles"})
+    @JsonIgnoreProperties({"slots", "roles", "hibernateLazyInitializer", "handler"})
     private Doctor doctor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id")
-    @JsonIgnoreProperties({"slots", "documents", "roles"})
+    @JsonIgnoreProperties({"slots", "documents", "roles", "hibernateLazyInitializer", "handler"})
     private Patient patient;
 }

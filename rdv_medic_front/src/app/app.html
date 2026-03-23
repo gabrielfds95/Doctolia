@@ -1,7 +1,13 @@
-<h2>
-    <a [routerLink]="['/']">
-        Médecins
-    </a>
-    
-</h2>
-<router-outlet></router-outlet> <!--est un placeholder : Angular injectera ici le composant correspondant à la route active -->
+@if (authService.currentUser) {
+  <nav class="navbar">
+    <a [routerLink]="['/']" class="nav-brand">Doctolia</a>
+    <div class="nav-right">
+      <span class="nav-user">
+        Bonjour, {{ authService.currentUser.firstName || authService.currentUser.username }}
+      </span>
+      <button class="btn-logout" (click)="logout()">Déconnexion</button>
+    </div>
+  </nav>
+}
+
+<router-outlet></router-outlet>

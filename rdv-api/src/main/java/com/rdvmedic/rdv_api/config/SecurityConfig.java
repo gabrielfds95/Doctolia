@@ -1,33 +1,27 @@
 package com.rdvmedic.rdv_api.config;
 
 import com.rdvmedic.rdv_api.security.JwtAuthenticationFilter;
-import com.rdvmedic.rdv_api.security.JwtTokenProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
-
-    @Autowired
-    private UserDetailsService userDetailsService;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -35,49 +29,50 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        AuthenticationManagerBuilder authenticationManagerBuilder = 
-                http.getSharedObject(AuthenticationManagerBuilder.class);
-        
-        authenticationManagerBuilder
-                .userDetailsService(userDetailsService)
-                .passwordEncoder(passwordEncoder());
-        
-        return authenticationManagerBuilder.build();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   JwtAuthenticationFilter jwtAuthFilter) throws Exception {
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(authz -> authz
-                    // Endpoints publics
-                    .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/doctors").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/doctors/{id}").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/doctors/{id}/slots").permitAll()
-                    .requestMatchers("/health").permitAll()
-                    
-                    // Endpoints Patient
-                    .requestMatchers(HttpMethod.GET, "/api/patients/me").hasRole("PATIENT")
-                    .requestMatchers(HttpMethod.PUT, "/api/patients/me").hasRole("PATIENT")
-                    .requestMatchers(HttpMethod.GET, "/api/documents").hasRole("PATIENT")
-                    .requestMatchers(HttpMethod.POST, "/api/documents").hasRole("PATIENT")
-                    .requestMatchers(HttpMethod.DELETE, "/api/documents/{id}").hasRole("PATIENT")
-                    
-                    // Endpoints Doctor
-                    .requestMatchers(HttpMethod.POST, "/api/doctors/{id}/slots").hasRole("DOCTOR")
-                    .requestMatchers(HttpMethod.PUT, "/api/slots/{id}").hasRole("DOCTOR")
-                    .requestMatchers(HttpMethod.DELETE, "/api/slots/{id}").hasRole("DOCTOR")
-                    .requestMatchers(HttpMethod.GET, "/api/doctors/me/slots").hasRole("DOCTOR")
-                    
-                    // Tous les autres endpoints requièrent l'authentification
-                    .anyRequest().authenticated()
+            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+            .authorizeHttpRequests(auth -> auth
+                // H2 console et gestion d'erreurs
+                .requestMatchers("/h2-console/**", "/error").permitAll()
+                // Authentification
+                .requestMatchers(HttpMethod.POST, "/login", "/register").permitAll()
+                // Lecture publique des médecins et créneaux
+                .requestMatchers(HttpMethod.GET,
+                        "/doctors", "/doctors/**", "/doctor/**",
+                        "/slots", "/slots/**").permitAll()
+                // Réservation d'un créneau : PATIENT uniquement
+                .requestMatchers(HttpMethod.POST, "/slot/**").hasRole("PATIENT")
+                // Tout le reste nécessite une authentification
+                .anyRequest().authenticated()
             )
-            .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), 
-                    UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+            "http://localhost:4200",
+            "http://localhost:8081"
+        ));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }

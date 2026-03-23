@@ -1,0 +1,46 @@
+<div class="login-wrapper">
+  <div class="login-card">
+    <h1 class="brand">Doctolia</h1>
+    <p class="subtitle">Connectez-vous à votre espace patient</p>
+
+    <form (submit)="submit($event)">
+      <div class="field">
+        <label for="username">Identifiant</label>
+        <input
+          id="username"
+          type="text"
+          placeholder="ex : pat.marc"
+          [value]="username"
+          (input)="username = $any($event.target).value"
+          autocomplete="username" />
+        @if (errors['username']) {
+          <span class="field-error">{{ errors['username'] }}</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <input
+          id="password"
+          type="password"
+          placeholder="••••••••"
+          [value]="password"
+          (input)="password = $any($event.target).value"
+          autocomplete="current-password" />
+        @if (errors['password']) {
+          <span class="field-error">{{ errors['password'] }}</span>
+        }
+      </div>
+
+      @if (errorMessage) {
+        <p class="error">{{ errorMessage }}</p>
+      }
+
+      <button type="submit" [disabled]="loading" class="btn-login">
+        {{ loading ? 'Connexion...' : 'Se connecter' }}
+      </button>
+    </form>
+
+    <p class="register-link">Pas encore de compte ? <a routerLink="/register">S'inscrire</a></p>
+  </div>
+</div>

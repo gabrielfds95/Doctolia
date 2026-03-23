@@ -19,7 +19,7 @@ public class DoctorService {
     @Autowired
     private DoctorRepository doctorRepository;
 
-    public Optional<Doctor> getDoctor(final int id) {
+    public Optional<Doctor> getDoctor(final Long id) {
         return doctorRepository.findById(id);
     }
 
@@ -28,12 +28,12 @@ public class DoctorService {
         return doctors;
     }
 
-    public Optional<Doctor> getDoctorById(int idDoctor) {
-        Optional<Doctor> doctor = doctorRepository.findDoctorById(idDoctor);
+    public Optional<Doctor> getDoctorById(Long idDoctor) {
+        Optional<Doctor> doctor = doctorRepository.findById(idDoctor);
         return doctor;
     }
 
-    public void deleteDoctor(final int id) {
+    public void deleteDoctor(final Long id) {
         doctorRepository.deleteById(id);
     }
 

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.rdvmedic.rdv_api.model.Slot;
 import com.rdvmedic.rdv_api.repository.SlotRepository;
 
+import com.rdvmedic.rdv_api.exception.ResourceNotFoundException;
 import lombok.Data;
 
 @Data
@@ -30,26 +31,25 @@ public class SlotService {
     private PatientRepository patientRepository;
 
 
-    public Optional<Slot> getSlot(final int id) {
+    public Optional<Slot> getSlot(final Long id) {
         return slotRepository.findById(id);
     }
 
-    public Iterable<Slot> getSlots() {
+    public List<Slot> getSlots() {
         return slotRepository.findAll();
     }
 
-    public void deleteSlot(final int id) {
+    public void deleteSlot(final Long id) {
         slotRepository.deleteById(id);
     }
 
-    public Slot addSlot(int doctorId,int patientId, Slot slot) {
+    public Slot addSlot(Long doctorId, Long patientId, Slot slot) {
         // On récupère le médecin en base avec son id
         Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Médecin introuvable : " + doctorId));
 
-        // On récupère le médecin en base avec son id
         Patient patient = patientRepository.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Patient introuvable : " + patientId));
 
 
         /* Vérifie si un créneau existe déjà pour ce médecin à cette date et heure
@@ -73,11 +73,11 @@ public class SlotService {
     //doctorId : C’est l’ID du médecin reçu depuis le controller.
     //slotRepository.findByDoctorId(doctorId) : Utilise le repository
     // pour interroger la base de données et récupérer tous les créneaux associés à ce médecin.
-    public List<Slot> getSlotsByDoctor(int idDoctor) {
+    public List<Slot> getSlotsByDoctor(Long idDoctor) {
         return slotRepository.findByDoctorId(idDoctor);
     }
 
-    public List<Slot> getSlotsByDoctorIdAndPatientId(int idDoctor, int idPatient) {
+    public List<Slot> getSlotsByDoctorIdAndPatientId(Long idDoctor, Long idPatient) {
         return slotRepository.findByDoctorIdAndPatientId(idDoctor,idPatient);
     }
 

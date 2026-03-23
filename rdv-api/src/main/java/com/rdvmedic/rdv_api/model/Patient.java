@@ -3,9 +3,9 @@ package com.rdvmedic.rdv_api.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
@@ -14,7 +14,7 @@ import java.util.List;
 @Table(name = "patients")
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @DiscriminatorValue("PATIENT")
 public class Patient extends User {
 

@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http'; // Permet de faire des requê
 import { Observable } from 'rxjs'; // Permet de gérer les flux de données asynchrones
 import {Doctor} from '../model/doctor.model';
 import {Slot} from '../model/slot.model';
-import {Patient} from '../model/patient.model';
 
 @Injectable({
   providedIn: 'root' // Rend le service disponible partout dans l'application
@@ -43,17 +42,5 @@ postNewSlot(slotData: {
 }
 
 
-
-postPatient(patientData: {
-  firstName: string;
-  lastName: string;
-  email: string;
-  age: number;
-}): Observable<Patient> {
-  return this.http.post<Patient>(`${this.baseURL}/patient`, patientData);
-
-
-
-}
 
 }

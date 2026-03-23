@@ -32,7 +32,7 @@ public class RegisterRequest {
     @NotBlank(message = "Le nom de famille est obligatoire")
     private String lastName;
     
-    @NotBlank(message = "Le type d'utilisateur est obligatoire")
+    @jakarta.validation.constraints.NotNull(message = "Le type d'utilisateur est obligatoire")
     private UserType userType;
     
     // Champs optionnels pour Patient

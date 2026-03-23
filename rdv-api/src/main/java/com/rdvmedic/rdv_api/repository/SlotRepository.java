@@ -20,9 +20,9 @@ import com.rdvmedic.rdv_api.model.Slot;
 //extends JpaRepository<Slot, Integer> : Hérite des méthodes CRUD de Spring Data JPA pour l’entité Slot.
 //findByDoctorId(int doctorId) : Méthode personnalisée qui utilise le nom de la propriété doctor dans l’entité
 // Slot pour générer automatiquement une requête SQL
-public interface SlotRepository extends JpaRepository<Slot, Integer> {
-    List<Slot> findByDoctorId(int doctorId);
-    List<Slot> findByDoctorIdAndPatientId(int doctorId, int patientId);
+public interface SlotRepository extends JpaRepository<Slot, Long> {
+  List<Slot> findByDoctorId(Long doctorId);
+  List<Slot> findByDoctorIdAndPatientId(Long doctorId, Long patientId);
 
 // Cette méthode permet de vérifier si un créneau existe déjà pour un médecin à une date donnée
 //Optional : conteneur qui peut contenir une valeur non nulle ou être vide
