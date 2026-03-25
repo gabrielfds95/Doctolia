@@ -13,10 +13,10 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSlots } from '../hooks/useSlots';
+import { useBookSlot } from '../hooks/useBookSlot';
 import { useAuth } from '../context/AuthContext';
 import { SlotCard } from '../components/SlotCard';
 import { Slot } from '../model/types';
-import axiosInstance from '../api/axiosInstance';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SlotList'>;
 
@@ -31,28 +31,21 @@ export function SlotListScreen({ route }: Props) {
   // États du formulaire de réservation
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [motif, setMotif] = useState('');
-  const [booking, setBooking] = useState(false);
+
+  // useBookSlot : encapsule POST /slot/{idDoctor}, le patientId vient du JWT
+  const { book, booking } = useBookSlot(() => {
+    refresh();
+  });
 
   async function handleBook() {
-    if (!selectedSlot || !user) return;
-    setBooking(true);
-    try {
-      // POST /slot/{doctorId}/{patientId} avec les données du créneau sélectionné
-      await axiosInstance.post(`/slot/${selectedSlot.doctor.id}/${user.id}`, {
-        slotDate: selectedSlot.slotDate,
-        slotTime: selectedSlot.slotTime,
-        endTime: selectedSlot.endTime,
-        slotReason: motif || selectedSlot.slotReason,
-        status: 'BOOKED',
-      });
+    if (!selectedSlot) return;
+    const ok = await book(selectedSlot, motif);
+    if (ok) {
       Alert.alert('Rendez-vous confirmé', `Le ${selectedSlot.slotDate} à ${selectedSlot.slotTime.slice(0, 5)}`);
       setSelectedSlot(null);
       setMotif('');
-      refresh(); // Recharge la liste via le trigger du custom hook
-    } catch {
+    } else {
       Alert.alert('Erreur', 'Impossible de réserver ce créneau.');
-    } finally {
-      setBooking(false);
     }
   }
 

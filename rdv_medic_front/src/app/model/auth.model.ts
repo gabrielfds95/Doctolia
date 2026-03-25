@@ -7,4 +7,5 @@ export interface AuthResponse {
   token: string;
   expiresIn: number;
   roles: string[];
+  enabled?: boolean;
 }

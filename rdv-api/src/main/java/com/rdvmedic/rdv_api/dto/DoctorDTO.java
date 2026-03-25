@@ -17,6 +17,7 @@ public class DoctorDTO {
     private String licenseNumber;
     private String department;
     private Integer experienceYears;
+    private Boolean enabled;
 
     public static DoctorDTO fromEntity(Doctor doctor) {
         if (doctor == null) return null;
@@ -30,6 +31,7 @@ public class DoctorDTO {
                 .licenseNumber(doctor.getLicenseNumber())
                 .department(doctor.getDepartment())
                 .experienceYears(doctor.getExperienceYears())
+                .enabled(doctor.getEnabled())
                 .build();
     }
 }

@@ -1,144 +1,194 @@
-<div class="register-wrapper">
-  <div class="register-card">
-    <h1 class="brand">Doctolia</h1>
-    <p class="subtitle">Créer votre compte patient</p>
+<div class="register-page">
 
-    <form (submit)="submit($event)">
-
-      <p class="section-title">Identifiants de connexion</p>
-
-      <div class="field">
-        <label for="username">Identifiant</label>
-        <input
-          id="username"
-          type="text"
-          placeholder="ex : pat.martin"
-          [value]="form.username"
-          (input)="form.username = $any($event.target).value"
-          autocomplete="username" />
-        @if (errors['username']) {
-          <span class="field-error">{{ errors['username'] }}</span>
-        }
-      </div>
-
-      <div class="field">
-        <label for="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          placeholder="ex : martin@email.com"
-          [value]="form.email"
-          (input)="form.email = $any($event.target).value"
-          autocomplete="email" />
-        @if (errors['email']) {
-          <span class="field-error">{{ errors['email'] }}</span>
-        }
-      </div>
-
-      <div class="field">
-        <label for="password">Mot de passe</label>
-        <input
-          id="password"
-          type="password"
-          placeholder="8 caractères minimum"
-          [value]="form.password"
-          (input)="form.password = $any($event.target).value"
-          autocomplete="new-password" />
-        @if (errors['password']) {
-          <span class="field-error">{{ errors['password'] }}</span>
-        }
-      </div>
-
-      <p class="section-title">Identité</p>
-
-      <div class="field-row">
-        <div class="field">
-          <label for="firstName">Prénom</label>
-          <input
-            id="firstName"
-            type="text"
-            placeholder="Jean"
-            [value]="form.firstName"
-            (input)="form.firstName = $any($event.target).value" />
-          @if (errors['firstName']) {
-            <span class="field-error">{{ errors['firstName'] }}</span>
-          }
-        </div>
-
-        <div class="field">
-          <label for="lastName">Nom</label>
-          <input
-            id="lastName"
-            type="text"
-            placeholder="Dupont"
-            [value]="form.lastName"
-            (input)="form.lastName = $any($event.target).value" />
-          @if (errors['lastName']) {
-            <span class="field-error">{{ errors['lastName'] }}</span>
-          }
-        </div>
-      </div>
-
-      <p class="section-title">Informations complémentaires <span class="optional">(optionnel)</span></p>
-
-      <div class="field">
-        <label for="ssn">Numéro de sécurité sociale</label>
-        <input
-          id="ssn"
-          type="text"
-          placeholder="ex : 1 85 06 75 056 089 42"
-          [value]="form.ssn"
-          (input)="form.ssn = $any($event.target).value" />
-      </div>
-
-      <div class="field-row">
-        <div class="field">
-          <label for="phoneNumber">Téléphone</label>
-          <input
-            id="phoneNumber"
-            type="tel"
-            placeholder="06 00 00 00 00"
-            [value]="form.phoneNumber"
-            (input)="form.phoneNumber = $any($event.target).value"
-            autocomplete="tel" />
-        </div>
-
-        <div class="field">
-          <label for="age">Âge</label>
-          <input
-            id="age"
-            type="number"
-            placeholder="ex : 34"
-            min="0"
-            max="150"
-            [value]="form.age"
-            (input)="form.age = $any($event.target).value" />
-          @if (errors['age']) {
-            <span class="field-error">{{ errors['age'] }}</span>
-          }
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="address">Adresse</label>
-        <input
-          id="address"
-          type="text"
-          placeholder="ex : 1 rue de Paris, 75001 Paris"
-          [value]="form.address"
-          (input)="form.address = $any($event.target).value"
-          autocomplete="street-address" />
-      </div>
-
-      @if (errorMessage) {
-        <p class="error">{{ errorMessage }}</p>
-      }
-
-      <button type="submit" [disabled]="loading" class="btn-submit">
-        {{ loading ? 'Création du compte...' : 'Créer mon compte' }}
-      </button>
-    </form>
-
-    <p class="login-link">Déjà un compte ? <a routerLink="/login">Se connecter</a></p>
+  <!-- Panneau gauche -->
+  <div class="register-left">
+    <div class="register-brand">
+      <span class="material-symbols-outlined">medical_services</span>
+      <h1>Doctolia</h1>
+      <p>L'avenir de la santé commence ici.</p>
+    </div>
   </div>
+
+  <!-- Panneau droit -->
+  <div class="register-right">
+    <div class="register-card">
+      <h2>Créer votre compte</h2>
+      <p class="register-subtitle">Rejoignez la plateforme Doctolia</p>
+
+      <!-- Toggle Patient / Médecin -->
+      <div class="type-selector">
+        <button type="button"
+          [class]="'type-btn' + (userType === 'PATIENT' ? ' active' : '')"
+          (click)="selectType('PATIENT')">
+          Patient
+        </button>
+        <button type="button"
+          [class]="'type-btn' + (userType === 'DOCTOR' ? ' active' : '')"
+          (click)="selectType('DOCTOR')">
+          Médecin
+        </button>
+      </div>
+
+      <form (submit)="submit($event)">
+
+        <!-- Identifiants -->
+        <p class="section-title">Identifiants de connexion</p>
+
+        <div class="form-group">
+          <label class="form-label" for="username">Identifiant</label>
+          <input id="username" class="form-input" type="text" placeholder="ex : pat.martin"
+            [value]="form.username"
+            (input)="form.username = $any($event.target).value"
+            autocomplete="username" />
+          @if (errors['username']) { <span class="form-error">{{ errors['username'] }}</span> }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input id="email" class="form-input" type="email" placeholder="ex : martin@email.com"
+            [value]="form.email"
+            (input)="form.email = $any($event.target).value"
+            autocomplete="email" />
+          @if (errors['email']) { <span class="form-error">{{ errors['email'] }}</span> }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Mot de passe</label>
+          <input id="password" class="form-input" type="password" placeholder="8 caractères minimum"
+            [value]="form.password"
+            (input)="form.password = $any($event.target).value"
+            autocomplete="new-password" />
+          @if (errors['password']) { <span class="form-error">{{ errors['password'] }}</span> }
+        </div>
+
+        <!-- Identité -->
+        <p class="section-title">Identité</p>
+
+        <div class="field-row">
+          <div class="form-group">
+            <label class="form-label" for="firstName">Prénom</label>
+            <input id="firstName" class="form-input" type="text" placeholder="Jean"
+              [value]="form.firstName"
+              (input)="form.firstName = $any($event.target).value" />
+            @if (errors['firstName']) { <span class="form-error">{{ errors['firstName'] }}</span> }
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lastName">Nom</label>
+            <input id="lastName" class="form-input" type="text" placeholder="Dupont"
+              [value]="form.lastName"
+              (input)="form.lastName = $any($event.target).value" />
+            @if (errors['lastName']) { <span class="form-error">{{ errors['lastName'] }}</span> }
+          </div>
+        </div>
+
+        <!-- Champs Patient -->
+        @if (userType === 'PATIENT') {
+          <p class="section-title">Coordonnées <span class="optional">(optionnel)</span></p>
+
+          <div class="form-group">
+            <label class="form-label" for="ssn">Numéro de sécurité sociale</label>
+            <input id="ssn" class="form-input" type="text" placeholder="1 85 06 75 056 089 42"
+              [value]="form.ssn"
+              (input)="form.ssn = $any($event.target).value" />
+          </div>
+
+          <div class="field-row">
+            <div class="form-group">
+              <label class="form-label" for="phoneNumber">Téléphone</label>
+              <input id="phoneNumber" class="form-input" type="tel" placeholder="06 00 00 00 00"
+                [value]="form.phoneNumber"
+                (input)="form.phoneNumber = $any($event.target).value"
+                autocomplete="tel" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="age">Âge</label>
+              <input id="age" class="form-input" type="number" placeholder="ex : 34" min="0" max="150"
+                [value]="form.age"
+                (input)="form.age = $any($event.target).value" />
+              @if (errors['age']) { <span class="form-error">{{ errors['age'] }}</span> }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="address">Adresse</label>
+            <input id="address" class="form-input" type="text" placeholder="1 rue de Paris, 75001 Paris"
+              [value]="form.address"
+              (input)="form.address = $any($event.target).value"
+              autocomplete="street-address" />
+          </div>
+        }
+
+        <!-- Champs Médecin -->
+        @if (userType === 'DOCTOR') {
+          <p class="section-title">Informations professionnelles</p>
+
+          <div class="info-banner">
+            <span class="material-symbols-outlined">info</span>
+            Votre compte sera examiné par un administrateur avant activation.
+          </div>
+
+          <div class="field-row">
+            <div class="form-group">
+              <label class="form-label" for="speciality">Spécialité *</label>
+              <input id="speciality" class="form-input" type="text" placeholder="ex : Cardiologie"
+                [value]="form.speciality"
+                (input)="form.speciality = $any($event.target).value" />
+              @if (errors['speciality']) { <span class="form-error">{{ errors['speciality'] }}</span> }
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="licenseNumber">N° de licence</label>
+              <input id="licenseNumber" class="form-input" type="text" placeholder="LIC-CAR-001"
+                [value]="form.licenseNumber"
+                (input)="form.licenseNumber = $any($event.target).value" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="form-group">
+              <label class="form-label" for="department">Service / Établissement</label>
+              <input id="department" class="form-input" type="text" placeholder="CHU Paris"
+                [value]="form.department"
+                (input)="form.department = $any($event.target).value" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="experienceYears">Années d'expérience</label>
+              <input id="experienceYears" class="form-input" type="number" placeholder="5" min="0"
+                [value]="form.experienceYears"
+                (input)="form.experienceYears = $any($event.target).value" />
+            </div>
+          </div>
+        }
+
+        <!-- Erreur globale -->
+        @if (errorMessage) {
+          <div class="alert-error">
+            <span class="material-symbols-outlined">error</span>
+            {{ errorMessage }}
+          </div>
+        }
+
+        <!-- Bannière succès médecin -->
+        @if (pendingMessage) {
+          <div class="pending-banner">
+            <span class="material-symbols-outlined">schedule</span>
+            {{ pendingMessage }}
+          </div>
+        } @else {
+          <button type="submit" [disabled]="loading" class="btn btn-primary btn-full">
+            @if (loading) {
+              <span class="material-symbols-outlined spin">progress_activity</span>
+              Création…
+            } @else {
+              {{ userType === 'DOCTOR' ? 'Soumettre ma candidature' : 'Créer mon compte' }}
+              <span class="material-symbols-outlined">arrow_forward</span>
+            }
+          </button>
+        }
+
+      </form>
+
+      <p class="login-link">Déjà un compte ? <a [routerLink]="['/login']">Se connecter</a></p>
+    </div>
+  </div>
+
 </div>

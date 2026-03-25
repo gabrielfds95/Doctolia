@@ -91,7 +91,19 @@ export class SlotListComponent implements OnInit {
     const dateStr = date.toISOString().split('T')[0];
     return this.takenSlots.some(slot => {
       const slotDateStr = new Date(slot.slotDate).toISOString().split('T')[0];
-      return slotDateStr === dateStr && slot.slotTime.slice(0, 5) === time;
+      return slotDateStr === dateStr && slot.slotTime.slice(0, 5) === time && slot.status === 'RESERVED';
+    });
+  }
+
+  isUnavailable(date: Date, time: string): boolean {
+    const dateStr = date.toISOString().split('T')[0];
+    return this.takenSlots.some(slot => {
+      const slotDateStr = new Date(slot.slotDate).toISOString().split('T')[0];
+      if (slotDateStr !== dateStr || slot.status !== 'CANCELLED') return false;
+      // Vérifie si l'heure est dans la plage bloquée [slotTime, endTime)
+      const start = slot.slotTime.slice(0, 5);
+      const end   = slot.endTime.slice(0, 5);
+      return time >= start && time < end;
     });
   }
 
@@ -125,15 +137,12 @@ export class SlotListComponent implements OnInit {
   submitForm(event: Event): void {
     event.preventDefault();
 
-    const patientId = this.authService.currentUser!.id;
-
     const endTime = this.selectedSlot!.hour.endsWith(':00')
       ? this.selectedSlot!.hour.replace(':00', ':30')
       : `${(Number(this.selectedSlot!.hour.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
 
     const slotData = {
       doctorId: this.doctorId,
-      patientId,
       slotDate: this.selectedSlot!.day.toISOString().split('T')[0],
       slotTime: this.selectedSlot!.hour,
       endTime,

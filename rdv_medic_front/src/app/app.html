@@ -1,13 +1,99 @@
 @if (authService.currentUser) {
-  <nav class="navbar">
-    <a [routerLink]="['/']" class="nav-brand">Doctolia</a>
-    <div class="nav-right">
-      <span class="nav-user">
-        Bonjour, {{ authService.currentUser.firstName || authService.currentUser.username }}
-      </span>
-      <button class="btn-logout" (click)="logout()">Déconnexion</button>
-    </div>
-  </nav>
-}
+  <div class="app-layout">
 
-<router-outlet></router-outlet>
+    <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+
+      <!-- Logo -->
+      <div class="sidebar-brand">
+        <span class="material-symbols-outlined">medical_services</span>
+        Doctolia
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+
+        @if (isPatient()) {
+          <span class="sidebar-section-label">Navigation</span>
+          <a [routerLink]="['/']" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="sidebar-link">
+            <span class="material-symbols-outlined">home</span>
+            Accueil
+          </a>
+          <a [routerLink]="['/mes-rdv']" routerLinkActive="active" class="sidebar-link">
+            <span class="material-symbols-outlined">calendar_today</span>
+            Mes rendez-vous
+          </a>
+          <a [routerLink]="['/messages']" routerLinkActive="active" class="sidebar-link">
+            <span class="material-symbols-outlined">chat</span>
+            Messages
+          </a>
+          <a [routerLink]="['/assistant']" routerLinkActive="active" class="sidebar-link">
+            <span class="material-symbols-outlined">smart_toy</span>
+            Assistant IA
+          </a>
+          <a [routerLink]="['/profile']" routerLinkActive="active" class="sidebar-link">
+            <span class="material-symbols-outlined">person</span>
+            Mon profil
+          </a>
+        }
+
+        @if (isDoctor()) {
+          <span class="sidebar-section-label">Navigation</span>
+          <a [routerLink]="['/mon-planning']" routerLinkActive="active" class="sidebar-link">
+            <span class="material-symbols-outlined">calendar_month</span>
+            Mon planning
+          </a>
+          <a [routerLink]="['/messages']" routerLinkActive="active" class="sidebar-link">
+            <span class="material-symbols-outlined">chat</span>
+            Messages
+          </a>
+          <a [routerLink]="['/profile']" routerLinkActive="active" class="sidebar-link">
+            <span class="material-symbols-outlined">person</span>
+            Mon profil
+          </a>
+        }
+
+        @if (isAdmin()) {
+          <span class="sidebar-section-label">Administration</span>
+          <a [routerLink]="['/admin']" routerLinkActive="active" class="sidebar-link">
+            <span class="material-symbols-outlined">admin_panel_settings</span>
+            Administration
+          </a>
+        }
+
+      </nav>
+
+      <!-- Footer utilisateur -->
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar">
+            {{ initials() }}
+          </div>
+          <div class="sidebar-user-info">
+            <div class="name">{{ authService.currentUser.firstName }} {{ authService.currentUser.lastName }}</div>
+            <span class="role-badge">{{ roleLabel() }}</span>
+          </div>
+        </div>
+        <button class="sidebar-logout" (click)="logout()">
+          <span class="material-symbols-outlined">logout</span>
+          Déconnexion
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- ── Contenu principal ─────────────────────────────────────────────── -->
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
+
+  </div>
+
+} @else {
+
+  <!-- Pages publiques (login / register) — sans sidebar -->
+  <div class="full-page">
+    <router-outlet></router-outlet>
+  </div>
+
+}

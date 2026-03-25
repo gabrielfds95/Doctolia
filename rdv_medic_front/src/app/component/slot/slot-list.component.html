@@ -1,87 +1,148 @@
-@if (selectedDoctor) {
-  <h2>Créneaux du Dr {{ selectedDoctor.lastName }} — {{ selectedDoctor.speciality }}</h2>
-}
-
-<div class="calendar-container">
-  @if (!loading && !errorMessage) {
-
-    <div class="week-navigation">
-      <button (click)="previousWeek()">← Semaine précédente</button>
-      <span>Semaine du {{ currentWeekStart | date: 'dd/MM/yyyy' }}</span>
-      <button (click)="nextWeek()">Semaine suivante →</button>
-    </div>
-
-    <div class="calendar-grid">
-
-      <div class="grid-header">
-        <div class="time-cell"></div>
-        @for (day of weekDays; track day) {
-          <div class="day-cell">
-            <strong>{{ day | date: 'EEEE' }}</strong><br>
-            <span>{{ day | date: 'dd/MM/yyyy' }}</span>
-          </div>
-        }
+<div class="page-header">
+  @if (selectedDoctor) {
+    <div class="doctor-header-info">
+      <div class="doctor-header-avatar">
+        {{ selectedDoctor.firstName[0] }}{{ selectedDoctor.lastName[0] }}
       </div>
-
-      @for (hour of hours; track hour) {
-        <div class="grid-row">
-          <div class="time-cell" [class.lunch]="isLunchBreak(hour)">{{ hour }}</div>
-          @for (day of weekDays; track day) {
-            <button
-              class="slot-cell"
-              [disabled]="isSlotTaken(day, hour) || isLunchBreak(hour)"
-              [class.taken]="isSlotTaken(day, hour)"
-              [class.lunch]="isLunchBreak(hour)"
-              (click)="openForm(day, hour)">
-              {{ isLunchBreak(hour) ? '' : (isSlotTaken(day, hour) ? 'Réservé' : 'Libre') }}
-            </button>
-          }
-        </div>
-      }
-
-      @if (selectedSlot) {
-        <div class="modal-overlay">
-          <div class="modal-form">
-            <button class="close-button" (click)="closeForm()">×</button>
-
-            <h3>Réservation — {{ selectedSlot.day | date: 'dd/MM/yyyy' }} à {{ selectedSlot.hour }}</h3>
-
-            <p class="patient-info">
-              Patient : <strong>{{ authService.currentUser?.firstName }} {{ authService.currentUser?.lastName }}</strong>
-            </p>
-
-            <form (submit)="submitForm($event)">
-              <label>
-                Motif / Symptômes :
-                <input
-                  type="text"
-                  [value]="slotReason"
-                  (input)="slotReason = $any($event.target).value"
-                  placeholder="ex : Bilan annuel, douleurs..."
-                  required />
-              </label>
-
-              <button type="submit" class="submit-button">Confirmer le rendez-vous</button>
-            </form>
-
-            @if (confirmationMessage) {
-              <div class="confirmation-message">
-                {{ confirmationMessage }}
-                <div class="progress-bar"></div>
-              </div>
-            }
-          </div>
-        </div>
-      }
-
+      <div>
+        <h1>Dr. {{ selectedDoctor.firstName }} {{ selectedDoctor.lastName }}</h1>
+        <p>{{ selectedDoctor.speciality }}
+          @if (selectedDoctor.department) { · {{ selectedDoctor.department }} }
+        </p>
+      </div>
     </div>
-  }
-
-  @if (loading) {
-    <div class="loading">Chargement des créneaux...</div>
-  }
-
-  @if (errorMessage) {
-    <div class="error">{{ errorMessage }}</div>
+  } @else {
+    <h1>Prendre un rendez-vous</h1>
   }
 </div>
+
+<div class="page-body">
+
+  @if (loading) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon spin">progress_activity</span>
+      <p>Chargement des créneaux…</p>
+    </div>
+  } @else if (errorMessage) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon" style="color:var(--error)">error</span>
+      <p>{{ errorMessage }}</p>
+    </div>
+  } @else {
+
+    <div class="week-nav">
+      <button class="btn btn-secondary btn-sm" (click)="previousWeek()">
+        <span class="material-symbols-outlined">chevron_left</span>
+        Semaine précédente
+      </button>
+      <span class="week-label">Semaine du {{ currentWeekStart | date: 'dd/MM/yyyy' }}</span>
+      <button class="btn btn-secondary btn-sm" (click)="nextWeek()">
+        Semaine suivante
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+
+    <div class="calendar-wrap">
+      <div class="calendar-grid">
+
+        <!-- Header jours -->
+        <div class="cal-header-row">
+          <div class="cal-time-col"></div>
+          @for (day of weekDays; track day) {
+            <div class="cal-day-head">
+              <span class="day-name">{{ day | date: 'EEE' }}</span>
+              <span class="day-num">{{ day | date: 'dd' }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- Lignes heures -->
+        @for (hour of hours; track hour) {
+          <div class="cal-row" [class.lunch-row]="isLunchBreak(hour)">
+            <div class="cal-time-col">{{ hour }}</div>
+            @for (day of weekDays; track day) {
+              <button
+                class="cal-cell"
+                [class.taken]="isSlotTaken(day, hour)"
+                [class.unavailable]="isLunchBreak(hour) || isUnavailable(day, hour)"
+                [class.free]="!isSlotTaken(day, hour) && !isLunchBreak(hour) && !isUnavailable(day, hour)"
+                [disabled]="isSlotTaken(day, hour) || isLunchBreak(hour) || isUnavailable(day, hour)"
+                (click)="openForm(day, hour)">
+                @if (isSlotTaken(day, hour)) {
+                  <span class="material-symbols-outlined cell-icon">event_busy</span>
+                } @else if (!isLunchBreak(hour) && !isUnavailable(day, hour)) {
+                  <span class="material-symbols-outlined cell-icon">add_circle</span>
+                }
+              </button>
+            }
+          </div>
+        }
+
+      </div>
+    </div>
+
+    <!-- Légende -->
+    <div class="calendar-legend">
+      <span class="legend-item"><span class="legend-dot free"></span> Libre</span>
+      <span class="legend-item"><span class="legend-dot taken"></span> Réservé</span>
+      <span class="legend-item"><span class="legend-dot unavailable"></span> Indisponible</span>
+    </div>
+
+  }
+
+</div>
+
+<!-- Modal réservation -->
+@if (selectedSlot) {
+  <div class="modal-overlay" (click)="closeForm()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Réserver un créneau</h3>
+        <button class="btn btn-ghost icon-btn" (click)="closeForm()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="slot-summary">
+        <span class="material-symbols-outlined">calendar_today</span>
+        <span>{{ selectedSlot.day | date: 'EEEE d MMMM yyyy' }} à {{ selectedSlot.hour }}</span>
+      </div>
+
+      <div class="patient-chip">
+        <span class="material-symbols-outlined">person</span>
+        {{ authService.currentUser?.firstName }} {{ authService.currentUser?.lastName }}
+      </div>
+
+      <form (submit)="submitForm($event)">
+        <div class="form-group">
+          <label class="form-label" for="reason">Motif / Symptômes *</label>
+          <input
+            id="reason"
+            class="form-input"
+            type="text"
+            [value]="slotReason"
+            (input)="slotReason = $any($event.target).value"
+            placeholder="ex : Bilan annuel, douleurs lombaires…"
+            required />
+        </div>
+
+        @if (confirmationMessage) {
+          <div [class]="'alert-banner ' + (confirmationMessage.includes('Erreur') ? 'alert-error' : 'alert-success')">
+            <span class="material-symbols-outlined">
+              {{ confirmationMessage.includes('Erreur') ? 'error' : 'check_circle' }}
+            </span>
+            {{ confirmationMessage }}
+          </div>
+        }
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">Annuler</button>
+          <button type="submit" class="btn btn-primary">
+            <span class="material-symbols-outlined">event_available</span>
+            Confirmer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

@@ -17,4 +17,20 @@ export class App {
     this.authService.logout();
     this.router.navigate(['/login']);
   }
+
+  isPatient(): boolean { return this.authService.isPatient(); }
+  isDoctor(): boolean  { return this.authService.isDoctor(); }
+  isAdmin(): boolean   { return this.authService.isAdmin(); }
+
+  initials(): string {
+    const u = this.authService.currentUser;
+    if (!u) return '';
+    return `${u.firstName?.[0] ?? ''}${u.lastName?.[0] ?? ''}`.toUpperCase();
+  }
+
+  roleLabel(): string {
+    if (this.isAdmin())   return 'Admin';
+    if (this.isDoctor())  return 'Médecin';
+    return 'Patient';
+  }
 }

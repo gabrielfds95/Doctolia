@@ -1,0 +1,213 @@
+<div class="page-header">
+  <h1>Mon profil</h1>
+  <p>Informations personnelles et paramètres de compte</p>
+</div>
+
+<div class="page-body">
+
+  @if (loading) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon spin">progress_activity</span>
+      <p>Chargement…</p>
+    </div>
+  } @else if (errorMessage) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon" style="color:var(--error)">error</span>
+      <p>{{ errorMessage }}</p>
+    </div>
+  } @else if (profile) {
+
+    @if (successMessage) {
+      <div class="success-banner">
+        <span class="material-symbols-outlined">check_circle</span>
+        {{ successMessage }}
+      </div>
+    }
+
+    @if (!editing) {
+
+      <div class="profile-layout">
+
+        <!-- Avatar card -->
+        <div class="card profile-avatar-card">
+          <div class="profile-avatar">
+            {{ profile.firstName[0] }}{{ profile.lastName[0] }}
+          </div>
+          <div class="profile-name">{{ profile.firstName }} {{ profile.lastName }}</div>
+          <div class="profile-username">@{{ profile.username }}</div>
+          @if (isDoctor()) {
+            <span class="badge badge-pending profile-role-badge">Médecin</span>
+          }
+          @if (isPatient()) {
+            <span class="badge badge-available profile-role-badge">Patient</span>
+          }
+          <button class="btn btn-primary profile-edit-btn" (click)="openEdit()">
+            <span class="material-symbols-outlined">edit</span>
+            Modifier le profil
+          </button>
+        </div>
+
+        <!-- Info card -->
+        <div class="profile-info-col">
+
+          <div class="card profile-section-card">
+            <p class="section-label">Informations de connexion</p>
+            <div class="profile-row">
+              <span class="material-symbols-outlined row-icon">person</span>
+              <div>
+                <div class="row-label">Identifiant</div>
+                <div class="row-value">{{ profile.username }}</div>
+              </div>
+            </div>
+            <div class="profile-row">
+              <span class="material-symbols-outlined row-icon">mail</span>
+              <div>
+                <div class="row-label">Email</div>
+                <div class="row-value">{{ profile.email }}</div>
+              </div>
+            </div>
+          </div>
+
+          @if (isPatient()) {
+            <div class="card profile-section-card">
+              <p class="section-label">Coordonnées</p>
+              @if (profile.phoneNumber) {
+                <div class="profile-row">
+                  <span class="material-symbols-outlined row-icon">call</span>
+                  <div>
+                    <div class="row-label">Téléphone</div>
+                    <div class="row-value">{{ profile.phoneNumber }}</div>
+                  </div>
+                </div>
+              }
+              @if (profile.address) {
+                <div class="profile-row">
+                  <span class="material-symbols-outlined row-icon">home</span>
+                  <div>
+                    <div class="row-label">Adresse</div>
+                    <div class="row-value">{{ profile.address }}</div>
+                  </div>
+                </div>
+              }
+              @if (profile.age) {
+                <div class="profile-row">
+                  <span class="material-symbols-outlined row-icon">cake</span>
+                  <div>
+                    <div class="row-label">Âge</div>
+                    <div class="row-value">{{ profile.age }} ans</div>
+                  </div>
+                </div>
+              }
+              @if (!profile.phoneNumber && !profile.address && !profile.age) {
+                <p class="empty-fields">Aucune coordonnée renseignée.</p>
+              }
+            </div>
+          }
+
+          @if (isDoctor()) {
+            <div class="card profile-section-card">
+              <p class="section-label">Informations professionnelles</p>
+              @if (profile.speciality) {
+                <div class="profile-row">
+                  <span class="material-symbols-outlined row-icon">stethoscope</span>
+                  <div>
+                    <div class="row-label">Spécialité</div>
+                    <div class="row-value">{{ profile.speciality }}</div>
+                  </div>
+                </div>
+              }
+              @if (profile.department) {
+                <div class="profile-row">
+                  <span class="material-symbols-outlined row-icon">local_hospital</span>
+                  <div>
+                    <div class="row-label">Service / Établissement</div>
+                    <div class="row-value">{{ profile.department }}</div>
+                  </div>
+                </div>
+              }
+              @if (profile.experienceYears) {
+                <div class="profile-row">
+                  <span class="material-symbols-outlined row-icon">military_tech</span>
+                  <div>
+                    <div class="row-label">Expérience</div>
+                    <div class="row-value">{{ profile.experienceYears }} ans</div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+        </div>
+      </div>
+
+    } @else {
+
+      <div class="card edit-card">
+        <p class="section-label">Modifier le profil</p>
+        <form (submit)="save(); $event.preventDefault()">
+
+          <div class="field-row">
+            <div class="form-group">
+              <label class="form-label" for="firstName">Prénom</label>
+              <input id="firstName" class="form-input" type="text" [(ngModel)]="form.firstName" name="firstName" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="lastName">Nom</label>
+              <input id="lastName" class="form-input" type="text" [(ngModel)]="form.lastName" name="lastName" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input id="email" class="form-input" type="email" [(ngModel)]="form.email" name="email" />
+          </div>
+
+          @if (isPatient()) {
+            <div class="field-row">
+              <div class="form-group">
+                <label class="form-label" for="phoneNumber">Téléphone</label>
+                <input id="phoneNumber" class="form-input" type="text" [(ngModel)]="form.phoneNumber" name="phoneNumber" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="age">Âge</label>
+                <input id="age" class="form-input" type="number" [(ngModel)]="form.age" name="age" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="address">Adresse</label>
+              <input id="address" class="form-input" type="text" [(ngModel)]="form.address" name="address" />
+            </div>
+          }
+
+          @if (isDoctor()) {
+            <div class="field-row">
+              <div class="form-group">
+                <label class="form-label" for="speciality">Spécialité</label>
+                <input id="speciality" class="form-input" type="text" [(ngModel)]="form.speciality" name="speciality" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="department">Service</label>
+                <input id="department" class="form-input" type="text" [(ngModel)]="form.department" name="department" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="experienceYears">Années d'expérience</label>
+              <input id="experienceYears" class="form-input" type="number" [(ngModel)]="form.experienceYears" name="experienceYears" />
+            </div>
+          }
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Annuler</button>
+            <button type="submit" class="btn btn-primary">
+              <span class="material-symbols-outlined">save</span>
+              Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+
+    }
+
+  }
+
+</div>

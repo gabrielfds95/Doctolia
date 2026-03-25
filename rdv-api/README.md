@@ -24,7 +24,7 @@ Développer une application web permettant aux **patients** de prendre des rende
 
 Le système doit gérer :
 - ✅ Les médecins et leurs spécialités
-- ✅ Les créneaux horaires disponibles
+- ✅ Les créneaux horaires indisponibles
 - ✅ Les patients et leurs documents médicaux
 - ✅ Les réservations de rendez-vous
 - ✅ L'authentification et l'autorisation sécurisées (JWT)
@@ -50,7 +50,7 @@ Le système doit gérer :
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│                      👤 USER (Entité Mère)                    │
+│                      👤 USER (Entité Mère)                     │
 ├────────────────────────────────────────────────────────────────┤
 │ PK  id: Long                                                   │
 │ ⚠️  username: String (UNIQUE)                                  │
@@ -61,14 +61,14 @@ Le système doit gérer :
 │     userType: UserType {PATIENT, DOCTOR}                       │
 │     enabled: Boolean                                           │
 │     createdAt: LocalDateTime                                   │
-│ FK  roles: Set<Role> (ManyToMany) ↔ ROLE_PATIENT, ROLE_DOCTOR │
+│ FK  roles: Set<Role> (ManyToMany) ↔ ROLE_PATIENT, ROLE_DOCTOR  │
 └────────────────────────────────────────────────────────────────┘
          △                              △
          │ @Inheritance                 │ @Inheritance
          │ (JOINED)                     │ (JOINED)
          │                              │
     ┌────┴──────────────┐       ┌───────┴────────┐
-    │  👨‍⚕️ DOCTOR          │       │ 🧑‍🤝‍🧑 PATIENT      │
+    │  👨‍⚕️ DOCTOR         │       │ 🧑‍🤝‍🧑 PATIENT     │
     ├───────────────────┤       ├────────────────┤
     │ PK  id: Long      │       │ PK  id: Long   │
     │     speciality    │       │     ssn        │
@@ -76,8 +76,8 @@ Le système doit gérer :
     │     department    │       │     address    │
     │     experience    │       │                │
     │                   │       │                │
-    │ FK  slots: List   │◄──────┼─── FK patient │
-    │     (OneToMany)   │       │     (ManyToOne)
+    │ FK  slots: List   │◄──────┼─── FK patient  │
+    │     (OneToMany)   │       │     (ManyToOne)│
     │                   │       │                │
     │                   │       │ FK  documents: │
     │                   │       │     List       │
@@ -87,21 +87,21 @@ Le système doit gérer :
          │ OneToMany                  │
          │ (owner: doctor)            │
          │                            │
-    ┌────┴────────────────┐      │
-    │  📅 SLOT            │      │
-    │  (Créneau)          │      │
-    ├─────────────────────┤      │
-    │ PK  id: Long        │      │
-    │     slotDate        │      │
-    │     slotTime        │      │
-    │     endTime         │      │
-    │     slotReason      │      │
-    │     status          │      │
-    │ FK  doctor_id       │      │
-    │ FK  patient_id ◄────┘
-    │ (ManyToOne)         │
-    └─────────────────────┘
-
+    ┌────┴────────────────┐           │
+    │  📅 SLOT            │           │
+    │  (Créneau)          │           │
+    ├─────────────────────┤           │
+    │ PK  id: Long        │           │
+    │     slotDate        │           │
+    │     slotTime        │           │
+    │     endTime         │           │
+    │     slotReason      │           │
+    │     status          │           │
+    │ FK  doctor_id       │           │
+    │ FK  patient_id ◄────┘           │
+    │ (ManyToOne)         │           │
+    └─────────────────────┘           │  
+                                      │
          ┌────────────────────────────┐
          │  📄 DOCUMENT               │
          ├────────────────────────────┤
@@ -143,7 +143,7 @@ Le système doit gérer :
 - ✅ Voir les informations des patients
 - ✅ Gérer le statut des rendez-vous (confirmé, annulé, complété)
 
-### Admin 🔧 (Optionnel)
+### Admin 🔧
 - ✅ Gérer les utilisateurs (patients, médecins)
 - ✅ Gérer les spécialités
 - ✅ Voir les statistiques

@@ -1,0 +1,125 @@
+<div class="page-header">
+  <h1>Mes rendez-vous</h1>
+  <p>Gérez vos consultations passées et à venir</p>
+</div>
+
+<div class="page-body">
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-chip">
+      <div class="stat-value">{{ slots.length }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-value">{{ countByStatus('RESERVED') }}</div>
+      <div class="stat-label">À venir</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-value">{{ countByStatus('COMPLETED') }}</div>
+      <div class="stat-label">Terminés</div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filter-tabs">
+    <button [class]="'filter-tab' + (filter === 'upcoming' ? ' active' : '')" (click)="setFilter('upcoming')">
+      À venir
+    </button>
+    <button [class]="'filter-tab' + (filter === 'past' ? ' active' : '')" (click)="setFilter('past')">
+      Passés
+    </button>
+    <button [class]="'filter-tab' + (filter === 'all' ? ' active' : '')" (click)="setFilter('all')">
+      Tous
+    </button>
+  </div>
+
+  @if (loading) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon spin">progress_activity</span>
+      <p>Chargement…</p>
+    </div>
+  } @else if (errorMessage) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon" style="color:var(--error)">error</span>
+      <p>{{ errorMessage }}</p>
+    </div>
+  } @else if (filteredSlots.length === 0) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon">calendar_today</span>
+      <p>Aucun rendez-vous pour ce filtre.</p>
+    </div>
+  } @else {
+    <div class="rdv-list">
+      @for (slot of filteredSlots; track slot.id) {
+        <div class="list-card">
+          <div [class]="'accent-bar ' + (slot.status?.toLowerCase() ?? 'unknown')"></div>
+          <div class="list-card-body">
+            <div class="rdv-top">
+              <div class="rdv-date-block">
+                <span class="material-symbols-outlined date-icon">event</span>
+                <div>
+                  <div class="rdv-date">{{ slot.slotDate | date:'EEEE d MMMM yyyy' }}</div>
+                  <div class="rdv-time">{{ slot.slotTime.slice(0, 5) }} – {{ slot.endTime.slice(0, 5) }}</div>
+                </div>
+              </div>
+              <span [class]="'badge badge-' + (slot.status?.toLowerCase() ?? '')">
+                {{ statusLabel(slot.status ?? '') }}
+              </span>
+            </div>
+            <div class="rdv-doctor">
+              <span class="material-symbols-outlined">stethoscope</span>
+              Dr {{ slot.doctor.lastName }} {{ slot.doctor.firstName }}
+              @if (slot.doctor.speciality) { · <em>{{ slot.doctor.speciality }}</em> }
+            </div>
+            @if (slot.slotReason) {
+              <div class="rdv-reason">
+                <span class="material-symbols-outlined">note</span>
+                {{ slot.slotReason }}
+              </div>
+            }
+            @if (isCancellable(slot)) {
+              <div class="rdv-actions">
+                <button class="btn btn-outline btn-sm" (click)="openEditReason(slot)">
+                  <span class="material-symbols-outlined">edit</span>
+                  Modifier motif
+                </button>
+                <button class="btn btn-danger-outline btn-sm" (click)="cancel(slot.id)">
+                  <span class="material-symbols-outlined">cancel</span>
+                  Annuler
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- Modal modifier motif -->
+@if (editingSlot) {
+  <div class="modal-overlay" (click)="closeEditReason()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Modifier le motif</h3>
+        <button class="btn btn-ghost icon-btn" (click)="closeEditReason()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="editReason">Motif / Symptômes</label>
+        <input id="editReason" class="form-input" type="text" [(ngModel)]="editReason"
+               placeholder="ex : Bilan annuel, douleurs…" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="closeEditReason()">Annuler</button>
+        <button class="btn btn-primary" (click)="saveReason()">
+          <span class="material-symbols-outlined">save</span>
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+}

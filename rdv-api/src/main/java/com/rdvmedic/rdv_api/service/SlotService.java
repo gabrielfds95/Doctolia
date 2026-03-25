@@ -3,8 +3,12 @@ package com.rdvmedic.rdv_api.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.rdvmedic.rdv_api.model.Doctor;
 import com.rdvmedic.rdv_api.model.Patient;
+import com.rdvmedic.rdv_api.model.SlotStatus;
 import com.rdvmedic.rdv_api.repository.DoctorRepository;
 import com.rdvmedic.rdv_api.repository.PatientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,18 +56,29 @@ public class SlotService {
                 .orElseThrow(() -> new ResourceNotFoundException("Patient introuvable : " + patientId));
 
 
-        /* Vérifie si un créneau existe déjà pour ce médecin à cette date et heure
-        Optional<Slot> existingSlot = slotRepository.findSlotByDoctorAndDateTime(
-                doctorId, slot.getSlotDate(),slot.getSlotTime());
+        // Vérifie les conflits : créneau déjà réservé ou indisponibilité qui couvre cette plage
+        boolean conflict = slotRepository.findByDoctorId(doctorId).stream().anyMatch(existing -> {
+            if (!existing.getSlotDate().equals(slot.getSlotDate())) return false;
+            if (existing.getStatus() == SlotStatus.RESERVED) {
+                return existing.getSlotTime().equals(slot.getSlotTime());
+            }
+            if (existing.getStatus() == SlotStatus.CANCELLED && existing.getPatient() == null) {
+                // Indisponibilité : vérifie si l'heure demandée est dans la plage bloquée
+                return !slot.getSlotTime().isBefore(existing.getSlotTime())
+                        && slot.getSlotTime().isBefore(existing.getEndTime());
+            }
+            return false;
+        });
 
-        if (existingSlot.isPresent()) {
-            // Si le créneau existe déjà, on lève une exception ou on peut retourner le créneau existant
-            throw new RuntimeException("Slot already exists for this doctor at this date and time");
-        }*/
+        if (conflict) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ce créneau est déjà réservé ou indisponible.");
+        }
 
-        // On rattache le médecin au créneau
+        // On rattache le médecin et le patient au créneau
         slot.setDoctor(doctor);
         slot.setPatient(patient);
+        slot.setStatus(SlotStatus.RESERVED); // Toute réservation passe en RESERVED
 
         // On enregistre le créneau en base
         return slotRepository.save(slot);
@@ -81,5 +96,38 @@ public class SlotService {
         return slotRepository.findByDoctorIdAndPatientId(idDoctor,idPatient);
     }
 
+    public List<Slot> getSlotsByPatient(Long patientId) {
+        return slotRepository.findByPatientId(patientId);
+    }
+
+    public Slot cancelSlot(Long slotId) {
+        Slot slot = slotRepository.findById(slotId)
+                .orElseThrow(() -> new ResourceNotFoundException("Créneau introuvable : " + slotId));
+        slot.setStatus(SlotStatus.CANCELLED);
+        return slotRepository.save(slot);
+    }
+
+    public Slot updateSlotReason(Long slotId, String newReason) {
+        Slot slot = slotRepository.findById(slotId)
+                .orElseThrow(() -> new ResourceNotFoundException("Créneau introuvable : " + slotId));
+        slot.setSlotReason(newReason);
+        return slotRepository.save(slot);
+    }
+
+    public Slot completeSlot(Long slotId) {
+        Slot slot = slotRepository.findById(slotId)
+                .orElseThrow(() -> new ResourceNotFoundException("Créneau introuvable : " + slotId));
+        slot.setStatus(SlotStatus.COMPLETED);
+        return slotRepository.save(slot);
+    }
+
+    public Slot createUnavailability(Long doctorId, Slot slot) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Médecin introuvable : " + doctorId));
+        slot.setDoctor(doctor);
+        slot.setPatient(null);
+        slot.setStatus(SlotStatus.CANCELLED); // Indisponibilité : bloque le créneau sans patient
+        return slotRepository.save(slot);
+    }
 
 }

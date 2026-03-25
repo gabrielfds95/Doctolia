@@ -22,4 +22,5 @@ public class AuthResponse {
     private String refreshToken;
     private Long expiresIn;
     private Set<String> roles;
+    private Boolean enabled;
 }

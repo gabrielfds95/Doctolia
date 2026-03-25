@@ -1,0 +1,127 @@
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slot-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.slot-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.slot-date-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  .date-icon {
+    font-size: 18px;
+    color: var(--primary-container);
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+}
+
+.slot-date {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  text-transform: capitalize;
+}
+
+.slot-time {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  margin-top: 2px;
+}
+
+.slot-patient {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--primary-container);
+  font-weight: 600;
+  margin-bottom: 6px;
+
+  .material-symbols-outlined { font-size: 16px; }
+}
+
+.slot-reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  margin-bottom: 8px;
+
+  .material-symbols-outlined { font-size: 14px; flex-shrink: 0; }
+}
+
+.slot-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.optional {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--outline);
+  font-size: 11px;
+}
+
+.alert-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--error-container);
+  color: var(--on-error-container);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  margin-bottom: 14px;
+
+  .material-symbols-outlined { font-size: 18px; flex-shrink: 0; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.icon-btn { padding: 6px; border-radius: var(--radius-md); line-height: 1; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }

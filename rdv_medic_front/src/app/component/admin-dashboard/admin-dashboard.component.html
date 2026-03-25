@@ -1,0 +1,83 @@
+<div class="page-header">
+  <h1>Administration</h1>
+  <p>Validation des comptes médecins</p>
+</div>
+
+<div class="page-body">
+
+  @if (successMessage) {
+    <div class="success-banner">
+      <span class="material-symbols-outlined">check_circle</span>
+      {{ successMessage }}
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="error-banner">
+      <span class="material-symbols-outlined">error</span>
+      {{ errorMessage }}
+    </div>
+  }
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-chip">
+      <div class="stat-value">{{ pendingDoctors.length }}</div>
+      <div class="stat-label">En attente</div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon spin">progress_activity</span>
+      <p>Chargement…</p>
+    </div>
+  } @else if (pendingDoctors.length === 0) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon">verified</span>
+      <p>Aucun médecin en attente de validation.</p>
+    </div>
+  } @else {
+    <div class="pending-list">
+      @for (doc of pendingDoctors; track doc.id) {
+        <div class="list-card">
+          <div class="accent-bar pending"></div>
+          <div class="list-card-body">
+            <div class="doc-top">
+              <div class="doc-avatar">{{ doc.firstName[0] }}{{ doc.lastName[0] }}</div>
+              <div class="doc-info">
+                <div class="doc-name">Dr {{ doc.firstName }} {{ doc.lastName }}</div>
+                <div class="doc-detail">
+                  <span class="badge badge-pending">{{ doc.speciality }}</span>
+                  @if (doc.department) { <span class="doc-dept">· {{ doc.department }}</span> }
+                </div>
+              </div>
+              <span class="badge badge-pending status-badge">En attente</span>
+            </div>
+
+            <div class="doc-meta">
+              <span><span class="material-symbols-outlined">mail</span> {{ doc.email }}</span>
+              @if (doc.licenseNumber) {
+                <span><span class="material-symbols-outlined">badge</span> Lic. {{ doc.licenseNumber }}</span>
+              }
+              @if (doc.experienceYears) {
+                <span><span class="material-symbols-outlined">military_tech</span> {{ doc.experienceYears }} ans d'exp.</span>
+              }
+            </div>
+
+            <div class="doc-actions">
+              <button class="btn btn-primary btn-sm" (click)="approve(doc.id)">
+                <span class="material-symbols-outlined">check_circle</span>
+                Approuver
+              </button>
+              <button class="btn btn-danger-outline btn-sm" (click)="reject(doc.id)">
+                <span class="material-symbols-outlined">cancel</span>
+                Rejeter
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>

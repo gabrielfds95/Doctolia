@@ -1,29 +1,60 @@
-<!-- Liste des médecins -->
-<!-- Liste des médecins -->
+<div class="page-header">
+  <h1>Trouver un médecin</h1>
+  <p>Bonjour {{ firstName }}, que recherchez-vous aujourd'hui ?</p>
+</div>
 
-@if (!loading && !errorMessage) {
-<ul>
+<div class="page-body">
 
-  @for (medecin of doctors; track medecin.id) {
-  <li (click)="goToDoctorSlots(medecin)">
-    <strong>{{ medecin.firstName }} {{ medecin.lastName }}</strong> - {{ medecin.speciality }}
-  </li>
+  <!-- Barre de recherche -->
+  <div class="search-bar">
+    <span class="material-symbols-outlined">search</span>
+    <input
+      class="search-input"
+      type="text"
+      placeholder="Rechercher par nom, spécialité..."
+      [(ngModel)]="searchQuery"
+    />
+  </div>
 
+  @if (loading) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon spin">progress_activity</span>
+      <p>Chargement des médecins…</p>
+    </div>
+  } @else if (errorMessage) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon" style="color:var(--error)">error</span>
+      <p>{{ errorMessage }}</p>
+    </div>
+  } @else {
+    <p class="section-count">{{ filteredDoctors.length }} médecin{{ filteredDoctors.length > 1 ? 's' : '' }} disponible{{ filteredDoctors.length > 1 ? 's' : '' }}</p>
+
+    @if (filteredDoctors.length === 0) {
+      <div class="empty-state">
+        <span class="material-symbols-outlined empty-icon">stethoscope</span>
+        <p>Aucun médecin trouvé.</p>
+      </div>
+    } @else {
+      <div class="doctors-grid">
+        @for (doctor of filteredDoctors; track doctor.id) {
+          <div class="doctor-card" (click)="goToDoctorSlots(doctor)">
+            <div class="doctor-avatar">
+              {{ doctor.firstName[0] }}{{ doctor.lastName[0] }}
+            </div>
+            <div class="doctor-info">
+              <h3>Dr. {{ doctor.firstName }} {{ doctor.lastName }}</h3>
+              <span class="speciality-badge">{{ doctor.speciality }}</span>
+              <p class="doctor-meta">
+                {{ doctor.department }} · {{ doctor.experienceYears }} ans d'exp.
+              </p>
+            </div>
+            <div class="doctor-cta">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </div>
+          </div>
+        }
+      </div>
+    }
   }
-</ul>
 
-}
-
-<!-- Indicateur de chargement -->
-
-@if (loading) {
-<div class="loading">Chargement des données...</div>
-
-}
-
-<!-- Message d'erreur -->
-
-@if (errorMessage) {
-<div class="error">{{ errorMessage }}</div>
-
-}
+</div>

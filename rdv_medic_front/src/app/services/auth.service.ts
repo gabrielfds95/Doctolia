@@ -24,9 +24,22 @@ export class AuthService {
 
   register(data: RegisterRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.BASE_URL}/register`, data).pipe(
-      tap(response => this.saveSession(response))
+      tap(response => {
+        // Ne pas sauvegarder la session si le compte est désactivé (médecin en attente)
+        if (response.enabled !== false) {
+          this.saveSession(response);
+        }
+      })
     );
   }
+
+  hasRole(role: string): boolean {
+    return this.currentUser?.roles?.includes(role) ?? false;
+  }
+
+  isAdmin(): boolean   { return this.hasRole('ROLE_ADMIN'); }
+  isDoctor(): boolean  { return this.hasRole('ROLE_DOCTOR'); }
+  isPatient(): boolean { return this.hasRole('ROLE_PATIENT'); }
 
   private saveSession(response: AuthResponse): void {
     localStorage.setItem(this.TOKEN_KEY, response.token);

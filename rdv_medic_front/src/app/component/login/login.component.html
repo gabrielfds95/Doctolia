@@ -1,46 +1,95 @@
-<div class="login-wrapper">
-  <div class="login-card">
-    <h1 class="brand">Doctolia</h1>
-    <p class="subtitle">Connectez-vous à votre espace patient</p>
+<div class="login-page">
 
-    <form (submit)="submit($event)">
-      <div class="field">
-        <label for="username">Identifiant</label>
-        <input
-          id="username"
-          type="text"
-          placeholder="ex : pat.marc"
-          [value]="username"
-          (input)="username = $any($event.target).value"
-          autocomplete="username" />
-        @if (errors['username']) {
-          <span class="field-error">{{ errors['username'] }}</span>
-        }
-      </div>
-
-      <div class="field">
-        <label for="password">Mot de passe</label>
-        <input
-          id="password"
-          type="password"
-          placeholder="••••••••"
-          [value]="password"
-          (input)="password = $any($event.target).value"
-          autocomplete="current-password" />
-        @if (errors['password']) {
-          <span class="field-error">{{ errors['password'] }}</span>
-        }
-      </div>
-
-      @if (errorMessage) {
-        <p class="error">{{ errorMessage }}</p>
-      }
-
-      <button type="submit" [disabled]="loading" class="btn-login">
-        {{ loading ? 'Connexion...' : 'Se connecter' }}
-      </button>
-    </form>
-
-    <p class="register-link">Pas encore de compte ? <a routerLink="/register">S'inscrire</a></p>
+  <!-- Panneau gauche : branding gradient -->
+  <div class="login-left">
+    <div class="login-brand">
+      <span class="material-symbols-outlined">medical_services</span>
+      <h1>Doctolia</h1>
+      <p>Votre santé, simplifiée.</p>
+    </div>
+    <div class="login-icons">
+      <span class="material-symbols-outlined">health_metrics</span>
+      <span class="material-symbols-outlined">stethoscope</span>
+      <span class="material-symbols-outlined">favorite</span>
+    </div>
   </div>
+
+  <!-- Panneau droit : formulaire -->
+  <div class="login-right">
+    <div class="login-card">
+      <h2>Connexion</h2>
+      <p class="login-subtitle">Bienvenue sur Doctolia</p>
+
+      <form (submit)="submit($event)">
+
+        <div class="form-group">
+          <label class="form-label" for="username">Identifiant</label>
+          <input
+            id="username"
+            class="form-input"
+            type="text"
+            placeholder="ex : pat.marc"
+            autocomplete="username"
+            [value]="form.username"
+            (input)="form.username = $any($event.target).value"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Mot de passe</label>
+          <div class="input-with-action">
+            <input
+              id="password"
+              class="form-input"
+              [type]="showPassword ? 'text' : 'password'"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              [value]="form.password"
+              (input)="form.password = $any($event.target).value"
+            />
+            <button type="button" class="toggle-pw" (click)="showPassword = !showPassword" tabindex="-1">
+              <span class="material-symbols-outlined">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-extras">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
+            Rester connecté
+          </label>
+          <a href="#" class="forgot-link">Oublié ?</a>
+        </div>
+
+        @if (errorMessage) {
+          <div class="alert-error">
+            <span class="material-symbols-outlined">error</span>
+            {{ errorMessage }}
+          </div>
+        }
+
+        <button type="submit" class="btn btn-primary btn-full" [disabled]="loading">
+          @if (loading) {
+            <span class="material-symbols-outlined spin">progress_activity</span>
+            Connexion…
+          } @else {
+            Se connecter
+            <span class="material-symbols-outlined">arrow_forward</span>
+          }
+        </button>
+
+      </form>
+
+      <p class="register-link">
+        Pas encore de compte ?
+        <a [routerLink]="['/register']">Créer un compte →</a>
+      </p>
+
+      <p class="demo-hint">
+        Comptes de démo : pat.marc / pat.jean<br>
+        <span>mot de passe : password</span>
+      </p>
+    </div>
+  </div>
+
 </div>

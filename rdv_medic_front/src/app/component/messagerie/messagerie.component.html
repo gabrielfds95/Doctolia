@@ -1,0 +1,84 @@
+<div class="page-header">
+  <h1>Messagerie</h1>
+  <p>
+    Échangez avec vos médecins
+    @if (totalUnread > 0) {
+      <span class="unread-badge">{{ totalUnread }} non lu{{ totalUnread > 1 ? 's' : '' }}</span>
+    }
+  </p>
+</div>
+
+<div class="page-body">
+  <div class="messaging-layout">
+
+    <!-- Liste conversations -->
+    <div class="conv-panel">
+      <div class="conv-search">
+        <span class="material-symbols-outlined">search</span>
+        <input class="conv-search-input" type="text" placeholder="Rechercher…" disabled />
+      </div>
+
+      <div class="conv-list">
+        @for (conv of conversations; track conv.id) {
+          <div
+            [class]="'conv-item' + (activeConversation?.id === conv.id ? ' active' : '')"
+            (click)="selectConversation(conv)">
+            <div class="conv-avatar">{{ conv.participantInitials }}</div>
+            <div class="conv-info">
+              <div class="conv-name">{{ conv.participantName }}</div>
+              <div class="conv-preview">{{ conv.lastMessage }}</div>
+            </div>
+            <div class="conv-meta">
+              <div class="conv-time">{{ formatTime(conv.lastMessageAt) }}</div>
+              @if (conv.unreadCount > 0) {
+                <div class="conv-unread">{{ conv.unreadCount }}</div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Zone messages -->
+    <div class="chat-panel">
+      @if (!activeConversation) {
+        <div class="chat-empty">
+          <span class="material-symbols-outlined chat-empty-icon">forum</span>
+          <p>Sélectionnez une conversation</p>
+        </div>
+      } @else {
+        <div class="chat-header">
+          <div class="chat-header-avatar">{{ activeConversation.participantInitials }}</div>
+          <div>
+            <div class="chat-header-name">{{ activeConversation.participantName }}</div>
+            <div class="chat-header-role">
+              {{ activeConversation.participantRole === 'DOCTOR' ? 'Médecin' : 'Patient' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-messages">
+          @for (msg of activeConversation.messages; track msg.id) {
+            <div [class]="'msg-bubble-wrap ' + (isMine(msg) ? 'mine' : 'theirs')">
+              <div class="msg-bubble">{{ msg.content }}</div>
+              <div class="msg-time">{{ formatTime(msg.sentAt) }}</div>
+            </div>
+          }
+        </div>
+
+        <form class="chat-input-bar" (submit)="sendMessage(); $event.preventDefault()">
+          <input
+            class="chat-input"
+            type="text"
+            [(ngModel)]="newMessage"
+            name="newMessage"
+            placeholder="Écrire un message…" />
+          <button type="submit" class="btn btn-primary send-btn" [disabled]="!newMessage.trim()">
+            <span class="material-symbols-outlined">send</span>
+          </button>
+        </form>
+      }
+    </div>
+
+  </div>
+</div>

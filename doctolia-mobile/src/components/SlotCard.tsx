@@ -8,9 +8,26 @@ interface SlotCardProps {
   onBook: (slot: Slot) => void; // Callback reçu du parent
 }
 
+// Etiquettes et couleurs par statut
+const STATUS_LABEL: Record<string, string> = {
+  AVAILABLE: 'Disponible',
+  RESERVED: 'Réservé',
+  CANCELLED: 'Annulé',
+  COMPLETED: 'Terminé',
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  AVAILABLE: '#dcfce7',
+  RESERVED: '#dbeafe',
+  CANCELLED: '#fee2e2',
+  COMPLETED: '#f3f4f6',
+};
+
 // Composant fonctionnel réutilisable — équivalent d'un composant React classique
 export function SlotCard({ slot, onBook }: SlotCardProps) {
   const isAvailable = slot.status === 'AVAILABLE';
+  const badgeBg = STATUS_COLOR[slot.status] ?? '#f3f4f6';
+  const badgeLabel = STATUS_LABEL[slot.status] ?? slot.status;
 
   return (
     <View style={[styles.card, !isAvailable && styles.cardUnavailable]}>
@@ -18,10 +35,8 @@ export function SlotCard({ slot, onBook }: SlotCardProps) {
         <Text style={styles.time}>{slot.slotTime.slice(0, 5)}</Text>
         <Text style={styles.arrow}> → </Text>
         <Text style={styles.time}>{slot.endTime.slice(0, 5)}</Text>
-        <View style={[styles.badge, !isAvailable && styles.badgeBooked]}>
-          <Text style={styles.badgeText}>
-            {isAvailable ? 'Disponible' : 'Réservé'}
-          </Text>
+        <View style={[styles.badge, { backgroundColor: badgeBg }]}>
+          <Text style={styles.badgeText}>{badgeLabel}</Text>
         </View>
       </View>
 
@@ -72,13 +87,9 @@ const styles = StyleSheet.create({
   },
   badge: {
     marginLeft: 'auto',
-    backgroundColor: '#dcfce7',
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 20,
-  },
-  badgeBooked: {
-    backgroundColor: '#fee2e2',
   },
   badgeText: {
     fontSize: 12,

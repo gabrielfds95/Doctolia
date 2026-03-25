@@ -1,7 +1,12 @@
-// doctor.model.ts
 export interface Doctor {
-  id: number;           // Identifiant du médecin
-  firstName: string;          // Nom de famille
-  lastName: string;       // Prénom
-  speciality: string;   // Spécialité médicale
+  id: number;
+  firstName: string;
+  lastName: string;
+  speciality: string;
+  email?: string;
+  username?: string;
+  licenseNumber?: string;
+  department?: string;
+  experienceYears?: number;
+  enabled?: boolean;
 }

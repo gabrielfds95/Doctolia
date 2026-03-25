@@ -27,13 +27,15 @@ public class DataInitializer {
     @Autowired private DoctorRepository doctorRepository;
     @Autowired private PatientRepository patientRepository;
     @Autowired private SlotRepository slotRepository;
+    @Autowired private AdminRepository adminRepository;
     @Autowired private PasswordEncoder passwordEncoder;
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void init() {
         initRoles();
-        if (userRepository.count() == 0) {
+        initAdmin();           // Toujours s'assurer que l'admin existe
+        if (userRepository.count() <= 1) {   // <= 1 car l'admin vient d'être créé
             initSeedData();
         }
     }
@@ -44,6 +46,18 @@ public class DataInitializer {
                 roleRepository.save(new Role(roleName));
             }
         }
+    }
+
+    private void initAdmin() {
+        if (userRepository.findByUsername("admin").isPresent()) return;
+        String password = passwordEncoder.encode("password");
+        Role adminRole = roleRepository.findByName(RoleName.ROLE_ADMIN).orElseThrow();
+        Admin admin = Admin.builder()
+                .username("admin").email("admin@rdvmedic.local").password(password)
+                .firstName("Super").lastName("Admin")
+                .enabled(true).roles(new HashSet<>(Set.of(adminRole))).build();
+        adminRepository.save(admin);
+        log.info("✅ Compte admin créé — login: admin / password: password");
     }
 
     private void initSeedData() {

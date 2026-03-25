@@ -7,6 +7,7 @@ import com.rdvmedic.rdv_api.model.Slot;
 import com.rdvmedic.rdv_api.model.SlotStatus;
 import com.rdvmedic.rdv_api.security.CustomUserDetailsService;
 import com.rdvmedic.rdv_api.security.JwtTokenProvider;
+import com.rdvmedic.rdv_api.security.UserPrincipal;
 import com.rdvmedic.rdv_api.service.SlotService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,9 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAut
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -119,12 +123,22 @@ class SlotControllerTest {
         Slot saved = buildSlot(10L, 1L, 2L);
         when(slotService.addSlot(eq(1L), eq(2L), any(Slot.class))).thenReturn(saved);
 
-        mockMvc.perform(post("/slot/1/2")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(input)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(10))
-                .andExpect(jsonPath("$.slotReason").value("Bilan annuel"));
+        // Alimente le SecurityContextHolder manuellement (même mécanisme que JwtAuthenticationFilter)
+        UserPrincipal mockPatient = new UserPrincipal(2L, "patient.test", "p@mail.fr", "secret",
+                true, List.of(new SimpleGrantedAuthority("ROLE_PATIENT")));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(mockPatient, null, mockPatient.getAuthorities()));
+
+        try {
+            mockMvc.perform(post("/slot/1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(input)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.id").value(10))
+                    .andExpect(jsonPath("$.slotReason").value("Bilan annuel"));
+        } finally {
+            SecurityContextHolder.clearContext(); // Nettoie pour ne pas polluer les autres tests
+        }
     }
 
     // ─── DELETE /slot/{id} ─────────────────────────────────────────────────────

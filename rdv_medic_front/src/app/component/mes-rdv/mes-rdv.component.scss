@@ -1,0 +1,92 @@
+.rdv-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.rdv-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.rdv-date-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  .date-icon {
+    font-size: 18px;
+    color: var(--primary-container);
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+}
+
+.rdv-date {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  text-transform: capitalize;
+}
+
+.rdv-time {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  margin-top: 2px;
+}
+
+.rdv-doctor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  margin-bottom: 6px;
+
+  .material-symbols-outlined { font-size: 16px; }
+  em { font-style: normal; color: var(--outline); }
+}
+
+.rdv-reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  margin-bottom: 8px;
+
+  .material-symbols-outlined { font-size: 14px; flex-shrink: 0; }
+}
+
+.rdv-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.icon-btn { padding: 6px; border-radius: var(--radius-md); line-height: 1; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }

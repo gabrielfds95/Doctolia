@@ -1,27 +1,39 @@
 // Importation des décorateurs et outils Angular
 import { Component, OnInit } from '@angular/core';
-// Importation du composant de routage (utile si tu utilises des routes)
 import { Router } from '@angular/router';
-// Importation de ton service API (adapte le chemin si nécessaire)
-import { ApiService } from '../../services/api.service';  // adapte le chemin si besoin
+import { ApiService } from '../../services/api.service';
 import { Doctor } from '../../model/doctor.model';
 import { CommonModule } from '@angular/common';
-// import { NgIf, NgFor } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
-  selector: 'app-doctor-list',// Nom du composant utilisé dans le HTML
-  standalone: true, // Indique que ce composant est standalone (pas besoin d'etre dans un module)
-  imports: [CommonModule], // Importation des composants nécessaires (ici pour les directives structurelles)
-  templateUrl: './doctor-list.component.html', // Fichier HTML associé au composant
-  styleUrls: ['./doctor-list.component.scss']     // Fichier SCSS associé au composant
+  selector: 'app-doctor-list',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './doctor-list.component.html',
+  styleUrls: ['./doctor-list.component.scss']
 })
-export class DoctorListComponent implements OnInit{
-  
-  doctors: Doctor[] = [];      // Liste des médecins à afficher
-  loading: boolean = true;       // Indicateur de chargement
-  errorMessage: string = '';     // Message d'erreur éventuel
+export class DoctorListComponent implements OnInit {
 
-  constructor(private apiService: ApiService, private router: Router) {}
+  doctors: Doctor[] = [];
+  loading = true;
+  errorMessage = '';
+  searchQuery = '';
+
+  get firstName(): string {
+    return this.authService.currentUser?.firstName ?? 'vous';
+  }
+
+  get filteredDoctors(): Doctor[] {
+    if (!this.searchQuery.trim()) return this.doctors;
+    const q = this.searchQuery.toLowerCase();
+    return this.doctors.filter(d =>
+      `${d.firstName} ${d.lastName} ${d.speciality}`.toLowerCase().includes(q)
+    );
+  }
+
+  constructor(private apiService: ApiService, private router: Router, private authService: AuthService) {}
 
   // Appel de l'API dès le chargement du composant
   ngOnInit(): void {

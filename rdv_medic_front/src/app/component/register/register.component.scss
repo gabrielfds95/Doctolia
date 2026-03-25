@@ -1,142 +1,202 @@
-.register-wrapper {
-  min-height: 100vh;
+.register-page {
   display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Panneau gauche identique au login */
+.register-left {
+  width: 320px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f0f4f8;
-  padding: 2rem 1rem;
+  padding: 48px 32px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 40%, rgba(255,255,255,0.08) 0%, transparent 60%);
+  }
+}
+
+.register-brand {
+  text-align: center;
+  color: #ffffff;
+  position: relative;
+  z-index: 1;
+
+  .material-symbols-outlined {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 10px;
+    opacity: 0.9;
+  }
+
+  h1 {
+    font-family: 'Manrope', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 6px;
+  }
+
+  p { font-size: 0.875rem; color: rgba(255,255,255,0.75); }
+}
+
+/* Panneau droit : formulaire scrollable */
+.register-right {
+  flex: 1;
+  background: var(--surface-container-low);
+  overflow-y: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 24px;
 }
 
 .register-card {
-  background: #fff;
-  padding: 2.5rem 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-float);
+  padding: 36px 32px;
   width: 100%;
-  max-width: 480px;
-  text-align: center;
+  max-width: 560px;
+
+  h2 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--on-surface);
+    margin-bottom: 4px;
+  }
+
+  .register-subtitle {
+    font-size: 0.875rem;
+    color: var(--on-surface-variant);
+    margin-bottom: 24px;
+  }
 }
 
-.brand {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2563eb;
-  margin: 0 0 0.25rem;
+/* Toggle Patient / Médecin */
+.type-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
 }
 
-.subtitle {
-  color: #6b7280;
-  font-size: 0.9rem;
-  margin-bottom: 1.75rem;
+.type-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--outline-variant);
+  background: var(--surface-container-lowest);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &.active {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
+    color: #ffffff;
+    border-color: transparent;
+  }
+
+  &:not(.active):hover { background: var(--surface-container); }
 }
 
+/* Sections */
 .section-title {
-  font-size: 0.8rem;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #9ca3af;
-  text-align: left;
-  margin: 1.25rem 0 0.75rem;
-  padding-top: 1rem;
-  border-top: 1px solid #f3f4f6;
+  letter-spacing: 0.6px;
+  color: var(--on-surface-variant);
+  padding: 16px 0 10px;
+  border-top: 1px solid var(--surface-container-high);
+  margin-top: 8px;
 
-  &:first-of-type {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-  }
+  &:first-of-type { border-top: none; padding-top: 0; }
 
   .optional {
     font-weight: 400;
     text-transform: none;
     letter-spacing: 0;
-    color: #d1d5db;
-    font-size: 0.8rem;
+    color: var(--outline);
+    font-size: 11px;
   }
 }
 
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
-.field {
+/* Bannière médecin en attente */
+.info-banner {
   display: flex;
-  flex-direction: column;
-  text-align: left;
-  margin-bottom: 0.75rem;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.8rem;
+  margin-bottom: 16px;
 
-  label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.3rem;
-  }
-
-  input {
-    padding: 0.6rem 0.8rem;
-    border: 1.5px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border-color 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: #2563eb;
-    }
-  }
+  .material-symbols-outlined { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
 }
 
-.field-error {
-  color: #dc2626;
-  font-size: 0.78rem;
-  margin-top: 0.25rem;
-}
-
-.error {
-  color: #dc2626;
+/* Erreur globale */
+.alert-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--error-container);
+  color: var(--on-error-container);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
   font-size: 0.85rem;
-  margin-bottom: 0.75rem;
-  text-align: left;
+  margin-bottom: 16px;
+
+  .material-symbols-outlined { font-size: 18px; flex-shrink: 0; }
 }
 
-.btn-submit {
-  width: 100%;
-  padding: 0.7rem;
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  margin-top: 1rem;
+/* Bannière succès médecin */
+.pending-banner {
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 0.875rem;
+  margin-top: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 
-  &:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  .material-symbols-outlined { font-size: 20px; flex-shrink: 0; }
 }
+
+.btn-full { width: 100%; justify-content: center; padding: 12px 18px; margin-top: 8px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
 
 .login-link {
-  margin-top: 1.25rem;
-  font-size: 0.88rem;
-  color: #6b7280;
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
 
   a {
-    color: #2563eb;
+    color: var(--primary-container);
     font-weight: 600;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
+    &:hover { text-decoration: underline; }
   }
 }

@@ -24,6 +24,26 @@
   letter-spacing: 0.5px;
 }
 
+.nav-links {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: .2rem .4rem;
+  border-radius: 4px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+}
+
 .nav-right {
   display: flex;
   align-items: center;

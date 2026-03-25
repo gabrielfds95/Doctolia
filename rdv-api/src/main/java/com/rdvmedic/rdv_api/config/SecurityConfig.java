@@ -46,12 +46,26 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**", "/error").permitAll()
                 // Authentification
                 .requestMatchers(HttpMethod.POST, "/login", "/register").permitAll()
+                // Patient : ses propres RDV et annulation (avant la règle publique /doctors/**)
+                .requestMatchers(HttpMethod.GET, "/patients/me/slots").hasRole("PATIENT")
+                .requestMatchers(HttpMethod.PATCH, "/slots/*/cancel").hasRole("PATIENT")
+                // Doctor : son planning personnel (avant la règle publique /doctors/**)
+                .requestMatchers(HttpMethod.GET, "/doctors/me/slots").hasRole("DOCTOR")
+                .requestMatchers(HttpMethod.POST, "/doctors/me/slots").hasRole("DOCTOR")
+                // Modification du motif et complétion de RDV
+                .requestMatchers(HttpMethod.PATCH, "/slots/*").hasRole("PATIENT")
+                .requestMatchers(HttpMethod.PUT, "/slots/*/complete").hasRole("DOCTOR")
+                // Profil utilisateur
+                .requestMatchers(HttpMethod.GET, "/users/me").authenticated()
+                .requestMatchers(HttpMethod.PATCH, "/users/me").authenticated()
+                // Admin
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                // Réservation d'un créneau : PATIENT uniquement
+                .requestMatchers(HttpMethod.POST, "/slot/**").hasRole("PATIENT")
                 // Lecture publique des médecins et créneaux
                 .requestMatchers(HttpMethod.GET,
                         "/doctors", "/doctors/**", "/doctor/**",
                         "/slots", "/slots/**").permitAll()
-                // Réservation d'un créneau : PATIENT uniquement
-                .requestMatchers(HttpMethod.POST, "/slot/**").hasRole("PATIENT")
                 // Tout le reste nécessite une authentification
                 .anyRequest().authenticated()
             )

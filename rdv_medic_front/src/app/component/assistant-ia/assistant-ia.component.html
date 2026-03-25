@@ -1,0 +1,76 @@
+<div class="page-header">
+  <div class="assistant-header-row">
+    <div class="assistant-icon">
+      <span class="material-symbols-outlined">smart_toy</span>
+    </div>
+    <div>
+      <h1>Assistant Médical IA</h1>
+      <p>Informations générales de santé · Ne remplace pas un médecin</p>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="chat-container">
+
+    <div class="disclaimer-banner">
+      <span class="material-symbols-outlined">info</span>
+      Cet assistant fournit des informations générales uniquement. En cas d'urgence, appelez le 15 (SAMU) ou le 18 (pompiers).
+    </div>
+
+    <div class="chat-messages">
+      @for (msg of messages; track msg.timestamp) {
+        <div [class]="'msg-wrap ' + msg.role">
+          @if (msg.role === 'assistant') {
+            <div class="msg-avatar-ia">
+              <span class="material-symbols-outlined">smart_toy</span>
+            </div>
+          }
+          <div class="msg-bubble">
+            <div class="msg-content">{{ msg.content }}</div>
+            <div class="msg-time">
+              {{ msg.timestamp | date:'HH:mm' }}
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (isTyping) {
+        <div class="msg-wrap assistant">
+          <div class="msg-avatar-ia">
+            <span class="material-symbols-outlined">smart_toy</span>
+          </div>
+          <div class="msg-bubble typing-bubble">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Suggestions -->
+    @if (messages.length === 1) {
+      <div class="suggestions">
+        @for (s of suggestions; track s) {
+          <button class="suggestion-chip" (click)="useSuggestion(s)">{{ s }}</button>
+        }
+      </div>
+    }
+
+    <!-- Input -->
+    <form class="chat-input-bar" (submit)="sendMessage(); $event.preventDefault()">
+      <input
+        class="chat-input"
+        type="text"
+        [(ngModel)]="input"
+        name="input"
+        placeholder="Posez votre question…"
+        [disabled]="isTyping" />
+      <button type="submit" class="btn btn-primary send-btn" [disabled]="!input.trim() || isTyping">
+        <span class="material-symbols-outlined">send</span>
+      </button>
+    </form>
+
+  </div>
+</div>

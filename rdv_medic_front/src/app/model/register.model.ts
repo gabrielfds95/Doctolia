@@ -9,4 +9,8 @@ export interface RegisterRequest {
   phoneNumber?: string;
   address?: string;
   age?: number;
+  speciality?: string;
+  licenseNumber?: string;
+  department?: string;
+  experienceYears?: number;
 }

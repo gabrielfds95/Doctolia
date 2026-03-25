@@ -1,4 +1,4 @@
-export type SlotStatus = 'AVAILABLE' | 'BOOKED' | 'CANCELLED';
+export type SlotStatus = 'AVAILABLE' | 'RESERVED' | 'CANCELLED' | 'COMPLETED';
 
 export interface AuthResponse {
   id: number;
@@ -21,6 +21,22 @@ export interface Doctor {
   department: string;
   licenseNumber: string;
   experienceYears: number;
+}
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  // Patient
+  phoneNumber?: string;
+  address?: string;
+  age?: number;
+  // Doctor
+  speciality?: string;
+  department?: string;
+  experienceYears?: number;
 }
 
 export interface PatientInfo {

@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core'; // Permet de marquer la classe comme injectable
-import { HttpClient } from '@angular/common/http'; // Permet de faire des requêtes HTTP
-import { Observable } from 'rxjs'; // Permet de gérer les flux de données asynchrones
-import {Doctor} from '../model/doctor.model';
-import {Slot} from '../model/slot.model';
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { Doctor } from '../model/doctor.model';
+import { Slot } from '../model/slot.model';
+import { UserProfile } from '../model/user-profile.model';
 
 @Injectable({
   providedIn: 'root' // Rend le service disponible partout dans l'application
@@ -33,14 +34,73 @@ getDoctorById(idDoctor: number): Observable<Doctor> {
 
 postNewSlot(slotData: {
   doctorId: number;
-  patientId: number;
   slotDate: string;
   slotTime: string;
+  endTime: string;
   slotReason: string;
 }): Observable<Slot> {
-  return this.http.post<Slot>(`${this.baseURL}/slot/${slotData.doctorId}/${slotData.patientId}`, slotData);
+  return this.http.post<Slot>(`${this.baseURL}/slot/${slotData.doctorId}`, slotData);
 }
 
+// ── Patient ──────────────────────────────────────────────────────────────────
 
+getMySlots(): Observable<Slot[]> {
+  return this.http.get<Slot[]>(`${this.baseURL}/patients/me/slots`);
+}
+
+cancelSlot(slotId: number): Observable<Slot> {
+  return this.http.patch<Slot>(`${this.baseURL}/slots/${slotId}/cancel`, {});
+}
+
+// ── Doctor ───────────────────────────────────────────────────────────────────
+
+getDoctorMySlots(): Observable<Slot[]> {
+  return this.http.get<Slot[]>(`${this.baseURL}/doctors/me/slots`);
+}
+
+createUnavailability(slot: {
+  slotDate: string;
+  slotTime: string;
+  endTime: string;
+  slotReason: string;
+}): Observable<Slot> {
+  return this.http.post<Slot>(`${this.baseURL}/doctors/me/slots`, slot);
+}
+
+deleteUnavailability(slotId: number): Observable<void> {
+  return this.http.delete<void>(`${this.baseURL}/slot/${slotId}`);
+}
+
+updateSlotReason(slotId: number, slotReason: string): Observable<Slot> {
+  return this.http.patch<Slot>(`${this.baseURL}/slots/${slotId}`, { slotReason });
+}
+
+completeSlot(slotId: number): Observable<Slot> {
+  return this.http.put<Slot>(`${this.baseURL}/slots/${slotId}/complete`, {});
+}
+
+// ── Profil ────────────────────────────────────────────────────────────────────
+
+getProfile(): Observable<UserProfile> {
+  return this.http.get<UserProfile>(`${this.baseURL}/users/me`);
+}
+
+updateProfile(data: Partial<UserProfile>): Observable<UserProfile> {
+  return this.http.patch<UserProfile>(`${this.baseURL}/users/me`, data);
+}
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+getPendingDoctors(): Observable<Doctor[]> {
+  return this.http.get<Doctor[]>(`${this.baseURL}/admin/doctors/pending`);
+}
+
+approveDoctor(id: number): Observable<Doctor> {
+  return this.http.put<Doctor>(`${this.baseURL}/admin/doctors/${id}/approve`, {});
+}
+
+rejectDoctor(id: number): Observable<void> {
+  return this.http.delete<void>(`${this.baseURL}/admin/doctors/${id}/reject`);
+}
 
 }

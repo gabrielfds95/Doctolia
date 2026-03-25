@@ -1,0 +1,150 @@
+<div class="page-header">
+  <div class="header-row">
+    <div>
+      <h1>Mon planning</h1>
+      <p>Consultations et indisponibilités</p>
+    </div>
+    <button class="btn btn-primary" (click)="openForm()">
+      <span class="material-symbols-outlined">block</span>
+      Ajouter indisponibilité
+    </button>
+  </div>
+</div>
+
+<div class="page-body">
+
+  <!-- Filtres -->
+  <div class="filter-tabs">
+    <button [class]="'filter-tab' + (filter === 'upcoming' ? ' active' : '')" (click)="setFilter('upcoming')">
+      À venir
+    </button>
+    <button [class]="'filter-tab' + (filter === 'past' ? ' active' : '')" (click)="setFilter('past')">
+      Passés
+    </button>
+    <button [class]="'filter-tab' + (filter === 'all' ? ' active' : '')" (click)="setFilter('all')">
+      Tous
+    </button>
+  </div>
+
+  @if (loading) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon spin">progress_activity</span>
+      <p>Chargement…</p>
+    </div>
+  } @else if (errorMessage) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon" style="color:var(--error)">error</span>
+      <p>{{ errorMessage }}</p>
+    </div>
+  } @else if (filteredSlots.length === 0) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon">calendar_month</span>
+      <p>Aucun créneau pour ce filtre.</p>
+    </div>
+  } @else {
+    <div class="slot-list">
+      @for (slot of filteredSlots; track slot.id) {
+        <div class="list-card">
+          <div [class]="'accent-bar ' + (isUnavailability(slot) ? 'pending' : slot.status?.toLowerCase() ?? 'unknown')"></div>
+          <div class="list-card-body">
+            <div class="slot-top">
+              <div class="slot-date-block">
+                <span class="material-symbols-outlined date-icon">
+                  {{ isUnavailability(slot) ? 'event_busy' : 'event_available' }}
+                </span>
+                <div>
+                  <div class="slot-date">{{ slot.slotDate | date:'EEEE d MMMM yyyy' }}</div>
+                  <div class="slot-time">{{ slot.slotTime.slice(0, 5) }} – {{ slot.endTime.slice(0, 5) }}</div>
+                </div>
+              </div>
+              <span [class]="'badge ' + (isUnavailability(slot) ? 'badge-pending' : 'badge-' + (slot.status?.toLowerCase() ?? ''))">
+                {{ slotLabel(slot) }}
+              </span>
+            </div>
+
+            @if (slot.patient) {
+              <div class="slot-patient">
+                <span class="material-symbols-outlined">person</span>
+                {{ slot.patient.firstName }} {{ slot.patient.lastName }}
+              </div>
+            }
+
+            @if (slot.slotReason) {
+              <div class="slot-reason">
+                <span class="material-symbols-outlined">note</span>
+                {{ slot.slotReason }}
+              </div>
+            }
+
+            <div class="slot-actions">
+              @if (isCompletable(slot)) {
+                <button class="btn btn-outline btn-sm" (click)="completeSlot(slot.id)">
+                  <span class="material-symbols-outlined">task_alt</span>
+                  Marquer terminé
+                </button>
+              }
+              @if (isUnavailability(slot)) {
+                <button class="btn btn-danger-outline btn-sm" (click)="deleteUnavailability(slot.id)">
+                  <span class="material-symbols-outlined">delete</span>
+                  Supprimer
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- Modal indisponibilité -->
+@if (showForm) {
+  <div class="modal-overlay" (click)="closeForm()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Bloquer une indisponibilité</h3>
+        <button class="btn btn-ghost icon-btn" (click)="closeForm()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <form (submit)="submitForm($event)">
+        <div class="form-group">
+          <label class="form-label" for="slotDate">Date *</label>
+          <input id="slotDate" class="form-input" type="date" [(ngModel)]="form.slotDate" name="slotDate" required />
+        </div>
+        <div class="field-row">
+          <div class="form-group">
+            <label class="form-label" for="slotTime">Heure début *</label>
+            <input id="slotTime" class="form-input" type="time" [(ngModel)]="form.slotTime" name="slotTime" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="endTime">Heure fin <span class="optional">(+30min par défaut)</span></label>
+            <input id="endTime" class="form-input" type="time" [(ngModel)]="form.endTime" name="endTime" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="slotReason">Motif <span class="optional">(optionnel)</span></label>
+          <input id="slotReason" class="form-input" type="text" [(ngModel)]="form.slotReason" name="slotReason"
+                 placeholder="Ex : Réunion, Congés, Formation…" />
+        </div>
+
+        @if (formError) {
+          <div class="alert-error-banner">
+            <span class="material-symbols-outlined">error</span>
+            {{ formError }}
+          </div>
+        }
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">Annuler</button>
+          <button type="submit" class="btn btn-primary">
+            <span class="material-symbols-outlined">block</span>
+            Bloquer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

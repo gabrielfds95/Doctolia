@@ -103,11 +103,20 @@ public class AuthService {
                     .licenseNumber(request.getLicenseNumber())
                     .department(request.getDepartment())
                     .experienceYears(request.getExperienceYears())
-                    .enabled(true)
+                    .enabled(false) // En attente de validation par un admin
                     .roles(new HashSet<>(Set.of(role)))
                     .build();
             Doctor saved = doctorRepository.save(doctor);
-            return buildAuthResponse(saved, Set.of("ROLE_DOCTOR"));
+            // Pas de token : le médecin doit être approuvé avant de se connecter
+            return AuthResponse.builder()
+                    .id(saved.getId())
+                    .username(saved.getUsername())
+                    .email(saved.getEmail())
+                    .firstName(saved.getFirstName())
+                    .lastName(saved.getLastName())
+                    .enabled(false)
+                    .roles(Set.of("ROLE_DOCTOR"))
+                    .build();
         }
 
         throw new RuntimeException("UserType non supporté : " + request.getUserType());
@@ -124,9 +133,12 @@ public class AuthService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
                 .token(token)
                 .expiresIn(jwtExpirationMs)
                 .roles(roles)
+                .enabled(user.getEnabled())
                 .build();
     }
 }
