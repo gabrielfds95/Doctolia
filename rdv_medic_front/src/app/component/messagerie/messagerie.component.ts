@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Conversation, Message } from '../../model/message.model';
 
 // TODO: remplacer les données en dur par un appel à l'API MessageService
@@ -51,15 +52,41 @@ const MOCK_CONVERSATIONS: Conversation[] = [
 @Component({
   selector: 'app-messagerie',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './messagerie.component.html',
   styleUrls: ['./messagerie.component.scss']
 })
-export class MessagerieComponent {
+export class MessagerieComponent implements OnInit {
 
   conversations: Conversation[] = MOCK_CONVERSATIONS;
   activeConversation: Conversation | null = null;
   newMessage = '';
+
+  constructor(private route: ActivatedRoute) {}
+
+  ngOnInit(): void {
+    const p = this.route.snapshot.queryParams;
+    if (p['doctorId']) {
+      const doctorId = Number(p['doctorId']);
+      let conv = this.conversations.find(c => c.participantId === doctorId) ?? null;
+      if (!conv) {
+        // Crée la conversation si elle n'existe pas encore
+        conv = {
+          id:               Date.now(),
+          participantId:    doctorId,
+          participantName:  p['doctorName'] ?? 'Médecin',
+          participantRole:  'DOCTOR',
+          participantInitials: p['doctorInitials'] ?? '?',
+          lastMessage:      '',
+          lastMessageAt:    new Date().toISOString(),
+          unreadCount:      0,
+          messages:         []
+        };
+        this.conversations.unshift(conv);
+      }
+      this.selectConversation(conv);
+    }
+  }
 
   selectConversation(conv: Conversation): void {
     this.activeConversation = conv;

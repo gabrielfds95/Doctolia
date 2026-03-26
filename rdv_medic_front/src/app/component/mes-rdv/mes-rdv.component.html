@@ -80,6 +80,10 @@
             }
             @if (isCancellable(slot)) {
               <div class="rdv-actions">
+                <button class="btn btn-outline btn-sm" (click)="contactDoctor(slot)">
+                  <span class="material-symbols-outlined">chat</span>
+                  Message
+                </button>
                 <button class="btn btn-outline btn-sm" (click)="openEditReason(slot)">
                   <span class="material-symbols-outlined">edit</span>
                   Modifier motif

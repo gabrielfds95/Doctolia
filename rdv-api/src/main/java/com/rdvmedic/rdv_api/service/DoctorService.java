@@ -24,13 +24,12 @@ public class DoctorService {
     }
 
     public List<Doctor> getDoctors() {
-        List<Doctor> doctors = doctorRepository.findAll();
-        return doctors;
+        return doctorRepository.findByEnabledTrue();
     }
 
     public Optional<Doctor> getDoctorById(Long idDoctor) {
-        Optional<Doctor> doctor = doctorRepository.findById(idDoctor);
-        return doctor;
+        return doctorRepository.findById(idDoctor)
+                .filter(d -> Boolean.TRUE.equals(d.getEnabled()));
     }
 
     public void deleteDoctor(final Long id) {

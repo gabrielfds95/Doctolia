@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { Slot } from '../../model/slot.model';
 
@@ -22,7 +23,7 @@ export class MesRdvComponent implements OnInit {
   editingSlot: Slot | null = null;
   editReason = '';
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private router: Router) {}
 
   ngOnInit(): void {
     this.loadSlots();
@@ -99,7 +100,22 @@ export class MesRdvComponent implements OnInit {
     return this.slots.filter(s => s.status === status).length;
   }
 
+  contactDoctor(slot: Slot): void {
+    const initials = (slot.doctor.firstName?.[0] ?? '') + (slot.doctor.lastName?.[0] ?? '');
+    this.router.navigate(['/messages'], {
+      queryParams: {
+        doctorId:       slot.doctor.id,
+        doctorName:     `Dr. ${slot.doctor.firstName} ${slot.doctor.lastName}`,
+        doctorInitials: initials.toUpperCase()
+      }
+    });
+  }
+
   isCancellable(slot: Slot): boolean {
-    return slot.status === 'RESERVED' && new Date(slot.slotDate) >= new Date();
+    if (slot.status !== 'RESERVED') return false;
+    const slotDay = new Date(slot.slotDate + 'T00:00:00'); // midnight local — évite le décalage UTC
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return slotDay >= today;
   }
 }

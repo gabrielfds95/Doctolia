@@ -29,8 +29,14 @@ export class LoginComponent {
     this.errorMessage = '';
     this.loading = true;
 
+    // Appel de la méthode login() du service d'authentification
     this.authService.login(this.form.username.trim(), this.form.password).subscribe({
-      next: () => this.router.navigate(['/']),
+      next: () => {
+        // Redirection après connexion réussie
+        if (this.authService.isAdmin()) this.router.navigate(['/admin']);
+        else if (this.authService.isDoctor()) this.router.navigate(['/mon-planning']);
+        else this.router.navigate(['/accueil']);
+      },
       error: (err) => {
         this.errorMessage = err.status === 403
           ? 'Votre compte est en attente de validation.'

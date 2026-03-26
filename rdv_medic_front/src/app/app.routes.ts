@@ -16,7 +16,8 @@ import { adminGuard } from './guards/admin.guard';
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { path: '', component: DoctorListComponent, canActivate: [authGuard] },
+  { path: '', redirectTo: 'accueil', pathMatch: 'full' },
+  { path: 'accueil', component: DoctorListComponent, canActivate: [authGuard] },
   { path: 'doctor-slots/:id', component: SlotListComponent, canActivate: [authGuard] },
   { path: 'mes-rdv', component: MesRdvComponent, canActivate: [authGuard] },
   { path: 'mon-planning', component: MonPlanningComponent, canActivate: [authGuard] },
