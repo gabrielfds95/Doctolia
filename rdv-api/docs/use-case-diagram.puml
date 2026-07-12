@@ -1,0 +1,129 @@
+@startuml use-case-diagram
+title rdv-api — Diagramme de cas d'utilisation
+' Généré à partir du code réel : chaque cas d'utilisation correspond à un
+' endpoint effectivement implémenté (voir docs/endpoints.md pour la table
+' complète méthode/URI/rôle/ownership).
+'
+' 4 acteurs : Visiteur, Patient, Médecin, Admin — tous réellement implémentés.
+' Admin N'HÉRITE PAS de Visiteur (pas de généralisation) : contrairement à
+' Patient/Médecin, un compte Admin n'est jamais créé via POST /register
+' (AuthService.register ne gère que UserType.PATIENT et UserType.DOCTOR —
+' un UserType.ADMIN y lève une RuntimeException "UserType non supporté").
+' Le seul compte admin existe via DataInitializer (seed), il s'authentifie
+' via /login comme tout le monde mais ne peut pas "s'inscrire".
+
+left to right direction
+skinparam packageStyle rect
+
+actor "Visiteur\n(non authentifié)" as Visiteur
+actor "Patient" as Patient
+actor "Médecin" as Medecin
+actor "Admin" as Admin
+
+' Un Patient et un Médecin sont d'abord des Visiteurs avant de se connecter :
+' ils héritent donc de ses cas d'usage (parcours public, y compris l'inscription).
+Visiteur <|-- Patient
+Visiteur <|-- Medecin
+
+rectangle "rdv-api" {
+
+  package "Accès public (permitAll)" {
+    usecase "Consulter la liste des médecins\nGET /doctors" as UC_ListDoctors
+    usecase "Consulter le profil d'un médecin\nGET /doctor/{id}" as UC_DoctorProfile
+    usecase "Consulter le calendrier d'un médecin\n(sans données patient)\nGET /doctors/{id}/slots" as UC_DoctorSlots
+    usecase "Consulter tous les créneaux\n(sans données patient)\nGET /slots" as UC_AllSlots
+    usecase "S'inscrire (patient ou médecin)\nPOST /register" as UC_Register
+    usecase "Se connecter\nPOST /login" as UC_Login
+  }
+
+  package "Compte (authenticated)" {
+    usecase "Consulter mon profil\nGET /users/me" as UC_MyProfile
+    usecase "Modifier mon profil\nPATCH /users/me" as UC_EditProfile
+  }
+
+  package "Patient (ROLE_PATIENT)" {
+    usecase "Réserver un créneau\nPOST /slot/{idDoctor}" as UC_BookSlot
+    usecase "Consulter mes rendez-vous\nGET /patients/me/slots" as UC_MySlots
+    usecase "Annuler un rendez-vous\nPATCH /slots/{id}/cancel" as UC_CancelSlot
+    usecase "Modifier le motif d'un rendez-vous\nPATCH /slots/{id}" as UC_EditReason
+  }
+
+  package "Médecin (ROLE_DOCTOR)" {
+    usecase "Consulter mon planning\nGET /doctors/me/slots" as UC_MyPlanning
+    usecase "Ajouter une indisponibilité\nPOST /doctors/me/slots" as UC_AddUnavailability
+    usecase "Supprimer une indisponibilité\nDELETE /slot/{id}" as UC_DeleteUnavailability
+    usecase "Marquer un rendez-vous terminé\nPUT /slots/{id}/complete" as UC_CompleteSlot
+  }
+
+  package "Chat d'un RDV (participants uniquement)" {
+    usecase "Consulter les messages\nGET /slots/{id}/messages" as UC_ReadChat
+    usecase "Envoyer un message\nPOST /slots/{id}/messages" as UC_SendChat
+  }
+
+  package "Administration (ROLE_ADMIN)" {
+    usecase "Consulter les médecins\nen attente de validation\nGET /admin/doctors/pending" as UC_PendingDoctors
+    usecase "Valider une inscription médecin\nPUT /admin/doctors/{id}/approve" as UC_ApproveDoctor
+    usecase "Rejeter une inscription médecin\nDELETE /admin/doctors/{id}/reject" as UC_RejectDoctor
+    usecase "Lister tous les patients\nGET /patients" as UC_ListPatients
+    usecase "Créer un compte patient\n(manuellement)\nPOST /patient" as UC_CreatePatient
+    usecase "Supprimer un compte patient\nDELETE /patient/{id}" as UC_DeletePatient
+    usecase "Supprimer un compte médecin\nDELETE /doctor/{id}" as UC_DeleteDoctor
+  }
+}
+
+Visiteur --> UC_ListDoctors
+Visiteur --> UC_DoctorProfile
+Visiteur --> UC_DoctorSlots
+Visiteur --> UC_AllSlots
+Visiteur --> UC_Register
+Visiteur --> UC_Login
+
+Patient --> UC_MyProfile
+Patient --> UC_EditProfile
+Patient --> UC_BookSlot
+Patient --> UC_MySlots
+Patient --> UC_CancelSlot
+Patient --> UC_EditReason
+Patient --> UC_ReadChat
+Patient --> UC_SendChat
+
+Medecin --> UC_MyProfile
+Medecin --> UC_EditProfile
+Medecin --> UC_MyPlanning
+Medecin --> UC_AddUnavailability
+Medecin --> UC_DeleteUnavailability
+Medecin --> UC_CompleteSlot
+Medecin --> UC_ReadChat
+Medecin --> UC_SendChat
+
+' Admin s'authentifie comme tout le monde (POST /login) et gère son propre
+' profil comme tout utilisateur connecté (UserController est agnostique du rôle) :
+Admin --> UC_Login
+Admin --> UC_MyProfile
+Admin --> UC_EditProfile
+
+Admin --> UC_PendingDoctors
+Admin --> UC_ApproveDoctor
+Admin --> UC_RejectDoctor
+Admin --> UC_ListPatients
+Admin --> UC_CreatePatient
+Admin --> UC_DeletePatient
+Admin --> UC_DeleteDoctor
+
+UC_CancelSlot .. UC_BookSlot : <<extend>>\n(annule un RDV existant,\ncrée par UC_BookSlot)
+UC_ApproveDoctor .. UC_Register : <<extend>>\n(valide une inscription\nmédecin créée par UC_Register)
+
+note bottom of UC_ReadChat
+  Ownership vérifié par MessageService.requireParticipant() :
+  seuls le patient ET le médecin du RDV concerné accèdent
+  au chat — pas juste "un patient" ou "un médecin" quelconque.
+end note
+
+note bottom of UC_CancelSlot
+  Ownership vérifié par SlotService.requireOwnerPatient()/
+  requireOwnerDoctor() : un patient/médecin ne peut agir
+  que sur SES PROPRES créneaux (403 sinon).
+  Voir AUDIT-SECURITE.md, faille 2.
+end note
+
+@enduml

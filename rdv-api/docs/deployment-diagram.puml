@@ -1,0 +1,55 @@
+@startuml deployment-diagram
+title rdv-api — Diagramme de déploiement
+' Reconstitué exactement depuis docker-compose.yml et Dockerfile (racine rdv-api/).
+' Ports, images et protocoles recopiés tels quels — aucune valeur inventée.
+
+skinparam node {
+  BackgroundColor #F5F5F5
+}
+skinparam database {
+  BackgroundColor #EAF2FF
+}
+
+node "Poste client" {
+  component "Navigateur\n(Angular SPA, port 4200 en dev)" as Browser
+}
+
+node "Docker Host" {
+
+  node "Conteneur doctolia-api\n(image construite depuis Dockerfile,\nbase eclipse-temurin:17-jre-jammy)" as ApiContainer {
+    artifact "app.jar\n(Spring Boot 3.5.4)" as Jar
+  }
+
+  node "Conteneur doctolia-postgres\n(image postgres:16-alpine)" as PgContainer {
+    database "PostgreSQL\ndb: doctolia" as PgDB
+  }
+
+  node "Conteneur doctolia-mongo\n(image mongo:7)" as MongoContainer {
+    database "MongoDB\ndb: doctolia_chat\ncollection: messages" as MongoDB
+  }
+}
+
+Browser --> ApiContainer : HTTPS/HTTP\nREST + JSON\nport 9000 (host) → 9000 (conteneur)\nCORS : origin http://localhost:4200
+
+ApiContainer --> PgContainer : JDBC (PostgreSQL wire protocol)\nport 5432 (host) → 5432 (conteneur)\nspring.datasource.url=jdbc:postgresql://postgres:5432/doctolia
+
+ApiContainer --> MongoContainer : MongoDB wire protocol\nport 27017 (host) → 27017 (conteneur)\nspring.data.mongodb.host=mongo
+
+note bottom of ApiContainer
+  Variables d'environnement (docker-compose.yml) :
+  SPRING_PROFILES_ACTIVE=prod, JWT_SECRET,
+  POSTGRES_HOST/PORT/DB/USER/PASSWORD,
+  MONGO_HOST/PORT/DATABASE
+end note
+
+note bottom of PgContainer
+  Volume nommé "doctolia-postgres-data"
+  (persistance des données SQL)
+end note
+
+note bottom of MongoContainer
+  Volume nommé "doctolia-mongo-data"
+  (persistance des données NoSQL)
+end note
+
+@enduml

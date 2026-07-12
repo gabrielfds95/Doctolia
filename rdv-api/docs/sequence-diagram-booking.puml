@@ -1,0 +1,96 @@
+@startuml sequence-diagram-booking
+title rdv-api — Séquence : POST /slot/{idDoctor} (réservation d'un créneau)
+' Reconstitué exactement depuis SlotController.addSlot() et SlotService.addSlot()
+' (voir src/main/java/.../controller/SlotController.java et .../service/SlotService.java).
+'
+' Note de fidélité : le "contrôle d'ownership" pour CETTE action précise consiste
+' à extraire l'id patient du JWT plutôt que de l'URL/body (aucun id falsifiable
+' par le client) — il n'y a pas de comparaison "propriétaire attendu vs appelant"
+' ici, car la réservation CRÉE une ressource, elle n'agit pas sur une ressource
+' existante. Ce deuxième type de contrôle (comparaison + 403 explicite) existe
+' réellement dans SlotService.requireOwnerPatient()/requireOwnerDoctor(), utilisé
+' par PATCH /slots/{id}/cancel, PATCH /slots/{id} et PUT /slots/{id}/complete —
+' pas par la réservation elle-même. Le 403 montré ci-dessous est le VRAI 403 de
+' addSlot() : médecin désactivé (compte en attente de validation admin).
+
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 160
+
+actor Patient as User
+participant "Angular\n(ApiService.postNewSlot)" as Angular
+participant "JwtAuthenticationFilter" as Filter
+participant "SecurityContextHolder" as SecCtx
+participant "SlotController" as Controller
+participant "SlotService" as Service
+participant "DoctorRepository" as DoctorRepo
+participant "PatientRepository" as PatientRepo
+participant "SlotRepository" as SlotRepo
+database "BDD (H2 / PostgreSQL)" as DB
+
+User -> Angular : choisit un médecin,\nune date, une heure
+Angular -> Filter : POST /slot/{idDoctor}\nHeader: Authorization: Bearer <JWT>\nBody: SlotCreateDTO{slotDate,slotTime,endTime,slotReason}
+
+Filter -> Filter : tokenProvider.validateToken(jwt)\n(signature + expiration)
+Filter -> SecCtx : setAuthentication(UserPrincipal{id, roles})
+note right of SecCtx
+  L'id du patient vient UNIQUEMENT du JWT,
+  jamais de l'URL ni du body : un patient ne
+  peut pas réserver "au nom" d'un autre — c'est
+  ça, le contrôle d'ownership sur cette action.
+end note
+Filter -> Controller : chain.doFilter() → requête transmise
+
+Controller -> SecCtx : getContext().getAuthentication()
+SecCtx --> Controller : UserPrincipal{id=currentUserId, roles=[ROLE_PATIENT]}
+
+alt currentUser == null
+  Controller --> Angular : 401 Unauthorized
+else authentifié
+  Controller -> Service : addSlot(idDoctor, currentUserId, slot)
+
+  Service -> DoctorRepo : findById(idDoctor)
+  DoctorRepo -> DB : SELECT * FROM doctors JOIN users ...
+  DB --> DoctorRepo : ligne médecin (ou vide)
+  DoctorRepo --> Service : Optional<Doctor>
+
+  alt médecin introuvable
+    Service --> Controller : throw ResourceNotFoundException
+    Controller --> Angular : 404 Not Found
+  else médecin.enabled == false
+    Service --> Controller : throw ResponseStatusException(FORBIDDEN)
+    Controller --> Angular : **403 Forbidden**\n"Ce médecin n'est pas encore disponible."
+  else médecin actif
+    Service -> PatientRepo : findById(currentUserId)
+    PatientRepo -> DB : SELECT * FROM patients JOIN users ...
+    DB --> PatientRepo : ligne patient
+    PatientRepo --> Service : Optional<Patient>
+
+    alt patient introuvable
+      Service --> Controller : throw ResourceNotFoundException
+      Controller --> Angular : 404 Not Found
+    else patient trouvé
+      Service -> SlotRepo : findByDoctorId(idDoctor)
+      SlotRepo -> DB : SELECT * FROM slots WHERE doctor_id = ?
+      DB --> SlotRepo : créneaux existants du médecin
+      SlotRepo --> Service : List<Slot>
+
+      Service -> Service : recherche de conflit\n(même date/heure RESERVED,\nou dans un bloc d'indisponibilité)
+
+      alt conflit détecté
+        Service --> Controller : throw ResponseStatusException(CONFLICT)
+        Controller --> Angular : 409 Conflict
+      else pas de conflit
+        Service -> Service : slot.setDoctor(doctor)\nslot.setPatient(patient)\nslot.setStatus(RESERVED)
+        Service -> SlotRepo : save(slot)
+        SlotRepo -> DB : INSERT INTO slots (...)
+        DB --> SlotRepo : ligne créée (id généré)
+        SlotRepo --> Service : Slot (persisté)
+        Service --> Controller : Slot
+        Controller --> Angular : 201 Created\nBody: SlotDTO
+        Angular --> User : confirmation du RDV
+      end
+    end
+  end
+end
+
+@enduml

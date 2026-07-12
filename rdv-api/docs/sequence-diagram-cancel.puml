@@ -1,0 +1,84 @@
+@startuml sequence-diagram-cancel
+title rdv-api — Séquence : PATCH /slots/{id}/cancel (annulation, contrôle d'ownership)
+' Reconstitué exactement depuis SlotController.cancelSlot() et SlotService.cancelSlot()
+' + SlotService.requireOwnerPatient() (voir src/main/java/.../controller/SlotController.java
+' et .../service/SlotService.java).
+'
+' Complémentaire à sequence-diagram-booking.puml : celui-ci montrait que l'id
+' patient vient du JWT (empêche de réserver "au nom" d'un autre). Celui-ci montre
+' l'AUTRE moitié du modèle de sécurité : une fois une ressource (Slot) créée,
+' toute action dessus doit prouver que l'appelant EST le propriétaire — comparaison
+' explicite, 403 sinon. C'est le cœur du correctif de la faille 2 (voir
+' AUDIT-SECURITE.md) : avant, n'importe quel patient authentifié pouvait annuler
+' le RDV de n'importe quel autre patient.
+
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 160
+
+actor Patient as User
+participant "Angular\n(ApiService.cancelSlot)" as Angular
+participant "JwtAuthenticationFilter" as Filter
+participant "SecurityContextHolder" as SecCtx
+participant "SlotController" as Controller
+participant "SlotService" as Service
+participant "SlotRepository" as SlotRepo
+database "BDD (H2 / PostgreSQL)" as DB
+
+User -> Angular : clique "Annuler"\nsur un de ses RDV (id)
+Angular -> Filter : PATCH /slots/{id}/cancel\nHeader: Authorization: Bearer <JWT>
+
+Filter -> Filter : tokenProvider.validateToken(jwt)\n(signature + expiration)
+Filter -> SecCtx : setAuthentication(UserPrincipal{id, roles})
+Filter -> Controller : chain.doFilter() → requête transmise
+
+Controller -> SecCtx : getContext().getAuthentication()
+SecCtx --> Controller : UserPrincipal{id=currentUserId, roles=[ROLE_PATIENT]}
+note right of Controller
+  L'id vient du SecurityContext (donc du JWT),
+  JAMAIS d'un paramètre de l'URL ou du body.
+  Mais ça ne suffit pas encore : rien ne garantit
+  que CE patient soit le propriétaire du slot {id}
+  demandé dans l'URL — c'est le rôle du Service.
+end note
+
+alt currentUser == null
+  Controller --> Angular : 401 Unauthorized
+else authentifié
+  Controller -> Service : cancelSlot(id, currentUserId)
+
+  Service -> SlotRepo : findById(id)
+  SlotRepo -> DB : SELECT * FROM slots WHERE id = ?
+  DB --> SlotRepo : ligne slot (ou vide)
+  SlotRepo --> Service : Optional<Slot>
+
+  alt slot introuvable
+    Service --> Controller : throw ResourceNotFoundException
+    Controller --> Angular : 404 Not Found
+  else slot trouvé
+    Service -> Service : requireOwnerPatient(slot, currentUserId)\n== slot.getPatient().getId().equals(currentUserId) ?
+
+    alt slot.patient == null **OU** slot.patient.id != currentUserId
+      Service --> Controller : throw ResponseStatusException(FORBIDDEN,\n"Ce créneau ne vous appartient pas.")
+      Controller --> Angular : **403 Forbidden**
+      note over Controller, Angular
+        C'est ICI le contrôle d'ownership au sens strict :
+        comparaison explicite propriétaire réel vs. appelant.
+        Testé en réel : pat.marc a tenté d'annuler un slot
+        de pat.jean → 403 obtenu (voir AUDIT-SECURITE.md,
+        faille 2, et SecurityRegressionTest.
+        patientCancelsAnotherPatientsSlot_isForbidden).
+      end note
+    else currentUserId == slot.patient.id (propriétaire légitime)
+      Service -> Service : slot.setStatus(CANCELLED)
+      Service -> SlotRepo : save(slot)
+      SlotRepo -> DB : UPDATE slots SET status = 'CANCELLED' WHERE id = ?
+      DB --> SlotRepo : ligne mise à jour
+      SlotRepo --> Service : Slot (persisté)
+      Service --> Controller : Slot
+      Controller --> Angular : 200 OK\nBody: SlotDTO{status: CANCELLED}
+      Angular --> User : RDV annulé
+    end
+  end
+end
+
+@enduml

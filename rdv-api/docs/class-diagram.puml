@@ -1,0 +1,130 @@
+@startuml class-diagram
+title rdv-api — Diagramme de classes (frontière SQL / NoSQL)
+' Champs et types recopiés exactement des entités réelles (model/*.java).
+' Les getters/setters Lombok (@Data) ne sont pas listés (générés, pas écrits à la main).
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rect
+
+package "SQL — JPA / Hibernate (H2 en dev, PostgreSQL en prod)" #F0F4FF {
+
+  abstract class User {
+    + id : Long <<PK>>
+    + username : String <<unique>>
+    + email : String <<unique>>
+    + password : String
+    + firstName : String
+    + lastName : String
+    + userType : UserType <<discriminator>>
+    + enabled : Boolean
+    + createdAt : LocalDateTime
+    + updatedAt : LocalDateTime
+    + roles : Set<Role>
+  }
+  note right of User
+    @Entity @Table("users")
+    @Inheritance(strategy = JOINED)
+    @DiscriminatorColumn("user_type")
+    Une table "users" (champs communs) + une table
+    par sous-classe, reliée par une FK sur l'id.
+  end note
+
+  class Doctor extends User {
+    + speciality : String
+    + licenseNumber : String <<unique>>
+    + department : String
+    + experienceYears : Integer
+    + slots : List<Slot>
+  }
+  note right of Doctor : @Table("doctors")\n@DiscriminatorValue("DOCTOR")
+
+  class Patient extends User {
+    + ssn : String
+    + phoneNumber : String
+    + address : String
+    + age : int
+    + slots : List<Slot>
+    + documents : List<Document>
+  }
+  note right of Patient : @Table("patients")\n@DiscriminatorValue("PATIENT")
+
+  class Admin extends User {
+  }
+  note right of Admin : @Table("admins")\n@DiscriminatorValue("ADMIN")\nAucun champ propre.
+
+  class Role {
+    + id : Long <<PK>>
+    + name : RoleName
+    + description : String
+  }
+  enum RoleName {
+    ROLE_PATIENT
+    ROLE_DOCTOR
+    ROLE_ADMIN
+  }
+  enum UserType {
+    PATIENT
+    DOCTOR
+    ADMIN
+  }
+
+  class Slot {
+    + id : Long <<PK>>
+    + slotDate : LocalDate
+    + slotTime : LocalTime
+    + endTime : LocalTime
+    + slotReason : String
+    + status : SlotStatus
+    + doctor : Doctor
+    + patient : Patient
+  }
+  enum SlotStatus {
+    AVAILABLE
+    RESERVED
+    CANCELLED
+    COMPLETED
+  }
+
+  class Document {
+    + id : Long <<PK>>
+    + name : String
+    + type : String
+    + fileUrl : String
+    + description : String
+    + uploadedAt : LocalDateTime
+    + patient : Patient
+  }
+  note right of Document
+    Entité + repository existent, mais AUCUN
+    controller ne l'expose : hors périmètre
+    de cette certification (Phase 2 non traitée,
+    assumé dans le dossier).
+  end note
+
+  User "1" o-- "*" Role : user_roles >
+  Doctor "1" o-- "0..*" Slot
+  Patient "1" o-- "0..*" Slot : (0..1 côté Slot :\nnull = indisponibilité)
+  Patient "1" o-- "0..*" Document
+}
+
+package "NoSQL — MongoDB (chat)" #FFF4E8 {
+  class Message {
+    + id : String <<ObjectId>>
+    + slotId : Long
+    + senderId : Long
+    + content : String
+    + sentAt : LocalDateTime
+  }
+  note right of Message
+    @Document(collection = "messages")
+    Pas d'entité JPA, pas de FK réelle : slotId/senderId
+    sont de simples Long. La cohérence (le slot existe,
+    l'appelant est bien un des 2 participants) est
+    vérifiée par MessageService, côté SQL, AVANT
+    tout accès à MongoDB — jamais par MongoDB lui-même.
+  end note
+}
+
+Slot .[#red,dashed]. Message : slotId (référence applicative\npas de contrainte DB,\nvérifiée par MessageService)
+
+@enduml
