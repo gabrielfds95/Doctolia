@@ -6,9 +6,11 @@ import com.rdvmedic.rdv_api.model.Doctor;
 import com.rdvmedic.rdv_api.model.Patient;
 import com.rdvmedic.rdv_api.model.Slot;
 import com.rdvmedic.rdv_api.repository.DoctorRepository;
+import com.rdvmedic.rdv_api.repository.MessageRepository;
 import com.rdvmedic.rdv_api.repository.PatientRepository;
 import com.rdvmedic.rdv_api.repository.SlotRepository;
 import com.rdvmedic.rdv_api.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -51,7 +53,18 @@ class SecurityRegressionTest {
     @Autowired private PatientRepository patientRepository;
     @Autowired private DoctorRepository doctorRepository;
     @Autowired private SlotRepository slotRepository;
+    @Autowired private MessageRepository messageRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+
+    /**
+     * @Transactional (au niveau classe) ne couvre que la transaction JPA/SQL — MongoDB
+     * n'y participe pas, donc les messages créés par un test ne sont PAS annulés
+     * automatiquement. Nettoyage manuel après chaque test pour l'isolation.
+     */
+    @AfterEach
+    void cleanupMessages() {
+        messageRepository.deleteAll();
+    }
 
     private String login(String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/login")
@@ -278,5 +291,98 @@ class SecurityRegressionTest {
 
         // Un nouveau créneau a bien été inséré (pas de merge sur l'id fourni par le client).
         assertThat(slotRepository.count()).isEqualTo(countBefore + 1);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Phase 3 — Chat MongoDB : ownership sur /slots/{id}/messages
+    //
+    // Nécessite MongoDB démarré (docker compose up -d) : sans lui, ces 4 tests
+    // échouent avec une erreur de connexion, mais TOUS LES AUTRES tests de cette
+    // classe (SQL) restent verts — le driver Mongo est paresseux, la connexion
+    // n'est tentée qu'à la première requête réelle vers le repository.
+    // ════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void participants_canSendAndReadMessages_inChronologicalOrder() throws Exception {
+        Slot slot = slotRepository.findAll().stream()
+                .filter(s -> s.getPatient() != null)
+                .findFirst().orElseThrow();
+        String patientToken = login(slot.getPatient().getUsername(), "password");
+        String doctorToken = login(slot.getDoctor().getUsername(), "password");
+
+        mockMvc.perform(post("/slots/" + slot.getId() + "/messages")
+                        .header("Authorization", "Bearer " + patientToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"Bonjour docteur\"}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/slots/" + slot.getId() + "/messages")
+                        .header("Authorization", "Bearer " + doctorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"Bonjour, je vous écoute\"}"))
+                .andExpect(status().isCreated());
+
+        // Lu par le patient : preuve que les DEUX participants ont accès au même fil.
+        MvcResult result = mockMvc.perform(get("/slots/" + slot.getId() + "/messages")
+                        .header("Authorization", "Bearer " + patientToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode messages = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertThat(messages).hasSize(2);
+        // Ordre chronologique garanti par findBySlotIdOrderBySentAtAsc (MongoRepository).
+        assertThat(messages.get(0).get("content").asText()).isEqualTo("Bonjour docteur");
+        assertThat(messages.get(0).get("senderId").asLong()).isEqualTo(slot.getPatient().getId());
+        assertThat(messages.get(1).get("content").asText()).isEqualTo("Bonjour, je vous écoute");
+        assertThat(messages.get(1).get("senderId").asLong()).isEqualTo(slot.getDoctor().getId());
+    }
+
+    @Test
+    void nonParticipant_cannotReadMessages_isForbidden() throws Exception {
+        Slot slot = slotRepository.findAll().stream()
+                .filter(s -> s.getPatient() != null)
+                .findFirst().orElseThrow();
+        Patient attacker = patientRepository.findAll().stream()
+                .filter(p -> !p.getId().equals(slot.getPatient().getId()))
+                .findFirst().orElseThrow();
+        String attackerToken = login(attacker.getUsername(), "password");
+
+        mockMvc.perform(get("/slots/" + slot.getId() + "/messages")
+                        .header("Authorization", "Bearer " + attackerToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void nonParticipant_cannotSendMessages_isForbidden() throws Exception {
+        Slot slot = slotRepository.findAll().stream()
+                .filter(s -> s.getPatient() != null)
+                .findFirst().orElseThrow();
+        Patient attacker = patientRepository.findAll().stream()
+                .filter(p -> !p.getId().equals(slot.getPatient().getId()))
+                .findFirst().orElseThrow();
+        String attackerToken = login(attacker.getUsername(), "password");
+
+        mockMvc.perform(post("/slots/" + slot.getId() + "/messages")
+                        .header("Authorization", "Bearer " + attackerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"je m'incruste\"}"))
+                .andExpect(status().isForbidden());
+
+        // Preuve que l'attaque n'a laissé aucune trace dans la collection Mongo.
+        assertThat(messageRepository.findBySlotIdOrderBySentAtAsc(slot.getId())).isEmpty();
+    }
+
+    @Test
+    void messagesOnUnavailabilitySlot_returnsNotFound() throws Exception {
+        // Une indisponibilité médecin (patient = null) n'a pas de "2 participants" :
+        // pas de chat possible dessus (voir MessageService.loadRealAppointment).
+        Slot unavailability = slotRepository.findAll().stream()
+                .filter(s -> s.getPatient() == null)
+                .findFirst().orElseThrow();
+        String doctorToken = login(unavailability.getDoctor().getUsername(), "password");
+
+        mockMvc.perform(get("/slots/" + unavailability.getId() + "/messages")
+                        .header("Authorization", "Bearer " + doctorToken))
+                .andExpect(status().isNotFound());
     }
 }

@@ -1,0 +1,48 @@
+# Stack complète : API + PostgreSQL (SQL, métier) + MongoDB (NoSQL, chat).
+# Démarrage : docker compose up -d --build
+# Prérequis : un fichier .env à la racine avec au minimum POSTGRES_PASSWORD et
+# JWT_SECRET (voir .env.example et le README, section Déploiement).
+services:
+  api:
+    build: .
+    container_name: doctolia-api
+    ports:
+      - "9000:9000"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JWT_SECRET: ${JWT_SECRET:?La variable JWT_SECRET doit être définie (voir .env.example)}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-doctolia}
+      POSTGRES_USER: ${POSTGRES_USER:-doctolia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?La variable POSTGRES_PASSWORD doit être définie (voir .env.example)}
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DATABASE: doctolia_chat
+    depends_on:
+      - postgres
+      - mongo
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: doctolia-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-doctolia}
+      POSTGRES_USER: ${POSTGRES_USER:-doctolia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?La variable POSTGRES_PASSWORD doit être définie (voir .env.example)}
+    volumes:
+      - doctolia-postgres-data:/var/lib/postgresql/data
+
+  mongo:
+    image: mongo:7
+    container_name: doctolia-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - doctolia-mongo-data:/data/db
+
+volumes:
+  doctolia-postgres-data:
+  doctolia-mongo-data:

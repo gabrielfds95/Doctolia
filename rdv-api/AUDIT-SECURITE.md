@@ -376,6 +376,7 @@ Toutes les routes de l'application, croisées avec la règle `SecurityConfig` qu
 | `/slots/{id}/cancel` | PATCH | `hasRole("PATIENT")` | ✅ `requireOwnerPatient` | Oui, mais seulement le sien |
 | `/slots/{id}` | PATCH | `hasRole("PATIENT")` | ✅ `requireOwnerPatient` | Oui, mais seulement le sien |
 | `/slots/{id}/complete` | PUT | `hasRole("DOCTOR")` | ✅ `requireOwnerDoctor` | Oui, mais seulement le sien |
+| `/slots/{id}/messages` | GET, POST | `authenticated()` (les 2 rôles possibles) | ✅ `MessageService.requireParticipant` | Oui, mais seulement les 2 participants du RDV (Phase 3, MongoDB) |
 | `/users/me` | GET, PATCH | `authenticated()` | ✅ id extrait du JWT (implicite : ne lit/modifie que sa propre ligne) | Oui, mais seulement soi-même |
 | `/patients` | GET | `hasRole("ADMIN")` | — | Oui (réservé admin) |
 | `/patient` | POST | `hasRole("ADMIN")` | — | — (création) |

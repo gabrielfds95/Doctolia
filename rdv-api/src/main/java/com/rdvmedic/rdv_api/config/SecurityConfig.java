@@ -103,6 +103,13 @@ public class SecurityConfig {
                 // Marquer un RDV comme terminé : réservé au médecin
                 .requestMatchers(HttpMethod.PUT, "/slots/*/complete").hasRole("DOCTOR")
 
+                // Chat d'un RDV : PATIENT et DOCTOR y ont potentiellement accès (les deux
+                // rôles peuvent être un des 2 participants) — authenticated() ici, et
+                // MessageService.requireParticipant() tranche lequel a vraiment le droit
+                // (ownership, pas juste le rôle — même principe que /slots/{id}/cancel).
+                .requestMatchers(HttpMethod.GET, "/slots/*/messages").authenticated()
+                .requestMatchers(HttpMethod.POST, "/slots/*/messages").authenticated()
+
                 // Profil : tout utilisateur connecté peut lire/modifier son profil
                 .requestMatchers(HttpMethod.GET, "/users/me").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/users/me").authenticated()
