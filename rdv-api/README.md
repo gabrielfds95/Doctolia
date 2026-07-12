@@ -393,43 +393,97 @@ curl -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc..." https://api.example.c
 
 ## 🚀 Installation & Démarrage
 
-### Prérequis
+### Mode développement (rapide, sans Docker)
 
-- Java 17+
-- Maven 3.8+
-- Node.js 18+ (pour Angular)
-- Git
-
-### Backend
+**Prérequis :** Java 17+, Maven 3.8+ (ou le wrapper `./mvnw` fourni), Git. MongoDB via Docker si tu veux tester le chat (`docker compose up -d mongo`) — le driver Mongo est paresseux, l'app démarre même sans lui.
 
 ```bash
-# 1. Cloner le projet
 git clone <repo-url>
 cd rdv-api
-
-# 2. Installer les dépendances Maven
-mvn clean install
-
-# 3. Démarrer l'application
-mvn spring-boot:run
-
-# API sera accessible sur : http://localhost:9000
+./mvnw spring-boot:run
+# API sur http://localhost:9000, base H2 en mémoire, aucune config requise
 ```
 
-### Frontend
+### Frontend (Angular)
 
 ```bash
-# 1. Créer le projet Angular (si nécessaire)
-ng new rdv-frontend
-
-# 2. Installer les dépendances
+cd rdv_medic_front
 npm install
-
-# 3. Démarrer le serveur Angular
 ng serve
-
-# Interface sera accessible sur : http://localhost:4200
+# Interface sur http://localhost:4200
 ```
+
+---
+
+## 🚢 Déploiement (profils Spring + Docker)
+
+### Profils Spring : `dev` (H2) / `prod` (PostgreSQL)
+
+| | `dev` (défaut) | `prod` |
+|---|---|---|
+| Base SQL | H2 en mémoire | PostgreSQL |
+| Activation | Aucune (défaut) | `SPRING_PROFILES_ACTIVE=prod` |
+| Config | `application-dev.properties` | `application-prod.properties` |
+| Console H2 | `/h2-console` activée | absente |
+| Credentials DB | aucun (H2 en mémoire) | `POSTGRES_*` obligatoires, pas de défaut |
+
+Basculer manuellement en local (sans Docker), par exemple contre un Postgres déjà démarré :
+
+```bash
+SPRING_PROFILES_ACTIVE=prod \
+POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_DB=doctolia \
+POSTGRES_USER=doctolia POSTGRES_PASSWORD=<motdepasse> \
+JWT_SECRET=<secret> \
+./mvnw spring-boot:run
+```
+
+### Stack complète via Docker Compose (API + PostgreSQL + MongoDB)
+
+**Prérequis :** Docker + Docker Compose. Aucun autre logiciel requis — c'est tout l'intérêt.
+
+**Procédure reproductible depuis un poste vierge :**
+
+```bash
+# 1. Cloner le monorepo
+git clone https://github.com/gabrielfds95/Doctolia.git
+cd Doctolia/rdv-api
+
+# 2. Configurer les secrets (jamais commités, voir .gitignore)
+cp .env.example .env
+# éditer .env : renseigner JWT_SECRET et POSTGRES_PASSWORD avec de vraies valeurs
+#   ex. génération d'un secret : openssl rand -base64 32
+
+# 3. Construire l'image et démarrer toute la stack
+docker compose up -d --build
+
+# 4. Vérifier que tout tourne
+docker compose ps
+docker compose logs api --tail 30
+# → doit afficher : "The following 1 profile is active: prod"
+
+# API disponible sur http://localhost:9000
+```
+
+**Variables d'environnement** (voir `.env.example`) :
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `JWT_SECRET` | Clé de signature des JWT | ❌ aucun — obligatoire, `docker compose` refuse de démarrer sans |
+| `POSTGRES_DB` | Nom de la base | `doctolia` |
+| `POSTGRES_USER` | Utilisateur PostgreSQL | `doctolia` |
+| `POSTGRES_PASSWORD` | Mot de passe PostgreSQL | ❌ aucun — obligatoire |
+
+**Arrêter la stack :** `docker compose down` (ajouter `-v` pour aussi supprimer les volumes de données).
+
+### CI — Non-régression automatisée (GitHub Actions)
+
+Fichier : [`.github/workflows/rdv-api-ci.yml`](../.github/workflows/rdv-api-ci.yml) (à la racine du monorepo — GitHub Actions exige ses workflows sous `.github/workflows/` au niveau du dépôt).
+
+- Déclenché à chaque `push` touchant `rdv-api/**`.
+- `./mvnw clean compile` puis `./mvnw test` — la suite complète (18 tests fonctionnels + 15 tests de sécurité, dont l'ownership du chat MongoDB).
+- Un **service container MongoDB** (`mongo:7`) est démarré par le workflow avant les tests : sans lui, les 4 tests de chat échoueraient (le reste de la suite, en H2, ne dépend pas de Mongo grâce à la connexion paresseuse du driver).
+- PostgreSQL n'est **pas** nécessaire en CI : les tests tournent sous le profil `dev` (H2) par défaut — seul le déploiement réel (`docker compose up`) utilise PostgreSQL.
+- Rapports de test (`surefire-reports`) publiés comme artefact à chaque run.
 
 ---
 

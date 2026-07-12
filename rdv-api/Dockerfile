@@ -19,13 +19,15 @@ RUN ./mvnw -q clean package -DskipTests
 # ── Stage 2 : exécution ──────────────────────────────────────────────────────
 # Image minimale : uniquement un JRE (pas de JDK, pas de Maven) → image plus
 # petite et surface d'attaque réduite pour la prod.
-FROM eclipse-temurin:17-jre-alpine
+# jammy (Ubuntu), pas alpine : meilleure disponibilité multi-plateforme
+# (l'image alpine n'a pas de manifeste pour toutes les architectures).
+FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
 # Utilisateur non-root : ne jamais faire tourner le process applicatif en root
 # dans un conteneur (principe de moindre privilège, même à l'intérieur du conteneur).
-RUN addgroup -S rdvapi && adduser -S rdvapi -G rdvapi
+RUN groupadd -r rdvapi && useradd -r -g rdvapi rdvapi
 USER rdvapi
 
 COPY --from=build /app/target/*.jar app.jar

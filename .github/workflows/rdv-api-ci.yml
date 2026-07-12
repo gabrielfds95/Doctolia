@@ -1,0 +1,59 @@
+name: rdv-api CI
+
+# Ne se déclenche que sur les changements touchant rdv-api/ (monorepo : pas besoin
+# de builder le backend quand seul le front Angular ou l'app mobile change).
+on:
+  push:
+    paths:
+      - "rdv-api/**"
+      - ".github/workflows/rdv-api-ci.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Service container MongoDB : nécessaire pour les tests du chat
+    # (SecurityRegressionTest). Le driver Mongo étant paresseux, les tests SQL
+    # continueraient de passer même sans lui — mais les 4 tests de chat échoueraient.
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok' --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: rdv-api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer le JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Build (sans les tests)
+        run: ./mvnw -B clean compile
+
+      # ./mvnw test = suite complète = non-régression automatisée (18 tests
+      # fonctionnels + 15 tests de sécurité dans SecurityRegressionTest, dont
+      # ownership du chat — voir AUDIT-SECURITE.md et CARNET-JUSTIFICATIONS.md).
+      # H2 (profil dev, actif par défaut) pour le SQL ; MongoDB via le service
+      # container ci-dessus pour le NoSQL — pas besoin de PostgreSQL ici.
+      - name: Tests (non-régression)
+        run: ./mvnw -B test
+
+      - name: Publier les rapports de test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: rdv-api/target/surefire-reports/
