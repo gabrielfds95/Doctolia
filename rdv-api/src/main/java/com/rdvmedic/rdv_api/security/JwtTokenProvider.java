@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,29 @@ public class JwtTokenProvider {
     // Durée de validité en millisecondes, lue depuis application.properties
     @Value("${app.jwt.expiration}")
     private long jwtExpiration;
+
+    // Valeur par défaut définie dans application.properties (dev uniquement) :
+    // app.jwt.secret=${JWT_SECRET:doctolia-secret-jwt-key-must-be-at-least-32chars-long}
+    // Si la variable d'env JWT_SECRET n'est jamais positionnée, cette valeur reste active.
+    private static final String INSECURE_DEFAULT_SECRET =
+            "doctolia-secret-jwt-key-must-be-at-least-32chars-long";
+
+    /**
+     * Filet de sécurité au démarrage : avertit bruyamment dans les logs si le secret
+     * de démonstration est toujours actif. N'empêche pas l'app de démarrer (utile pour
+     * le développement local sans configuration), mais rend l'oubli visible plutôt que
+     * silencieux — c'est justement ce qui manquait pour ce point de la checklist Phase 1.
+     */
+    @PostConstruct
+    private void warnIfDefaultSecret() {
+        if (INSECURE_DEFAULT_SECRET.equals(jwtSecret)) {
+            log.warn("############################################################");
+            log.warn("JWT_SECRET n'est pas défini : la clé de DÉMONSTRATION est utilisée.");
+            log.warn("Ne JAMAIS déployer cet état en production.");
+            log.warn("→ définir la variable d'environnement JWT_SECRET avant tout déploiement réel.");
+            log.warn("############################################################");
+        }
+    }
 
     /**
      * Convertit la clé secrète (String) en objet cryptographique SecretKey.

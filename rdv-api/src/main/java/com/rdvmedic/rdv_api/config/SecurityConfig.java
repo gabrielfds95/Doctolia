@@ -114,13 +114,37 @@ public class SecurityConfig {
                 // (l'id patient vient du JWT, pas de l'URL → sécurisé)
                 .requestMatchers(HttpMethod.POST, "/slot/**").hasRole("PATIENT")
 
-                // Lecture publique : tout le monde peut voir les médecins et les créneaux
-                // (nécessaire pour afficher le calendrier avant connexion)
+                // Suppression d'une indisponibilité : réservée au médecin, et uniquement
+                // la sienne (ownership vérifié dans SlotService.deleteSlot).
+                .requestMatchers(HttpMethod.DELETE, "/slot/*").hasRole("DOCTOR")
+
+                // Gestion administrative des comptes patient/médecin : jamais accessible
+                // à un simple utilisateur connecté. Avant ce correctif, ces 4 routes
+                // n'avaient AUCUNE règle déclarée et retombaient sur anyRequest().authenticated()
+                // → n'importe quel utilisateur authentifié (patient inclus) pouvait lister
+                // tous les patients (avec leur NIR), en créer, ou supprimer un patient/médecin.
+                .requestMatchers(HttpMethod.GET, "/patients").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/patient").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/patient/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/doctor/*").hasRole("ADMIN")
+
+                // Lecture publique : tout le monde peut voir les médecins et leurs créneaux
+                // (nécessaire pour afficher le calendrier avant connexion).
+                // Ces deux endpoints renvoient PublicSlotDTO (pas SlotDTO) : aucune donnée
+                // patient n'est exposée. Voir AUDIT-SECURITE.md, faille 1.
+                //
+                // "/slots/**" a été RETIRÉ de cette liste : il couvrait GET /slots/{idDoctor}/{idPatient},
+                // une requête ciblée sur un patient précis, sans cas d'usage anonyme légitime
+                // (contrairement au calendrier d'un médecin). Elle retombe donc sur
+                // anyRequest().authenticated() plus bas → 401 sans token.
                 .requestMatchers(HttpMethod.GET,
                         "/doctors", "/doctors/**", "/doctor/**",
-                        "/slots", "/slots/**").permitAll()
+                        "/slots").permitAll()
 
-                // Toute autre requête non listée ci-dessus nécessite d'être connecté
+                // Deny-by-default : toute route non listée explicitement ci-dessus exige
+                // au minimum d'être connecté (jamais permitAll par défaut). Un nouvel
+                // endpoint ajouté sans règle dédiée est donc automatiquement fermé aux
+                // anonymes, plutôt que silencieusement ouvert à tous.
                 .anyRequest().authenticated()
             )
 

@@ -55,8 +55,14 @@ public class SlotService {
         return slotRepository.findAll();
     }
 
-    /** Supprime un créneau (utilisé pour les indisponibilités médecin). */
-    public void deleteSlot(final Long id) {
+    /**
+     * Supprime un créneau (utilisé pour les indisponibilités médecin).
+     * Ownership : seul le médecin propriétaire du créneau peut le supprimer.
+     */
+    public void deleteSlot(final Long id, final Long currentDoctorId) {
+        Slot slot = slotRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Créneau introuvable : " + id));
+        requireOwnerDoctor(slot, currentDoctorId);
         slotRepository.deleteById(id);
     }
 
@@ -132,11 +138,6 @@ public class SlotService {
         return slotRepository.findByDoctorId(idDoctor);
     }
 
-    /** Récupère les créneaux partagés entre un médecin et un patient. */
-    public List<Slot> getSlotsByDoctorIdAndPatientId(Long idDoctor, Long idPatient) {
-        return slotRepository.findByDoctorIdAndPatientId(idDoctor, idPatient);
-    }
-
     /**
      * Récupère tous les créneaux d'un patient.
      * Utilisé par "Mes rendez-vous" (patient connecté → id extrait du JWT).
@@ -150,10 +151,15 @@ public class SlotService {
      * Le slot passe en CANCELLED mais reste en BDD (historique).
      * Note : le patient est conservé sur le slot — c'est le patient null qui
      * distingue une indisponibilité médecin d'un RDV annulé par le patient.
+     *
+     * @param slotId          id du créneau à annuler (vient de l'URL)
+     * @param currentPatientId id du patient connecté, extrait du JWT par le controller
+     *                         (jamais fourni par le client) → vérifie l'ownership
      */
-    public Slot cancelSlot(Long slotId) {
+    public Slot cancelSlot(Long slotId, Long currentPatientId) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("Créneau introuvable : " + slotId));
+        requireOwnerPatient(slot, currentPatientId);
         slot.setStatus(SlotStatus.CANCELLED);
         return slotRepository.save(slot);
     }
@@ -161,10 +167,13 @@ public class SlotService {
     /**
      * Met à jour le motif d'un créneau réservé.
      * Permet au patient de modifier la raison de sa consultation avant le RDV.
+     *
+     * @param currentPatientId id du patient connecté, extrait du JWT → vérifie l'ownership
      */
-    public Slot updateSlotReason(Long slotId, String newReason) {
+    public Slot updateSlotReason(Long slotId, String newReason, Long currentPatientId) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("Créneau introuvable : " + slotId));
+        requireOwnerPatient(slot, currentPatientId);
         slot.setSlotReason(newReason);
         return slotRepository.save(slot);
     }
@@ -172,12 +181,36 @@ public class SlotService {
     /**
      * Marque un RDV comme terminé (action du médecin après la consultation).
      * Statut COMPLETED → apparaîtra dans les "RDV passés" côté patient.
+     *
+     * @param currentDoctorId id du médecin connecté, extrait du JWT → vérifie l'ownership
      */
-    public Slot completeSlot(Long slotId) {
+    public Slot completeSlot(Long slotId, Long currentDoctorId) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("Créneau introuvable : " + slotId));
+        requireOwnerDoctor(slot, currentDoctorId);
         slot.setStatus(SlotStatus.COMPLETED);
         return slotRepository.save(slot);
+    }
+
+    /**
+     * Vérifie que le créneau appartient bien au patient connecté.
+     * Lève 403 (pas 404) : le créneau existe, l'appelant n'a juste pas le droit d'agir dessus.
+     * C'est le cœur du correctif de la faille 2 (voir AUDIT-SECURITE.md) : avant, n'importe
+     * quel patient authentifié pouvait annuler/modifier le RDV d'un autre patient.
+     */
+    private void requireOwnerPatient(Slot slot, Long currentPatientId) {
+        if (slot.getPatient() == null || !slot.getPatient().getId().equals(currentPatientId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Ce créneau ne vous appartient pas.");
+        }
+    }
+
+    /** Même principe que requireOwnerPatient, côté médecin (son propre planning uniquement). */
+    private void requireOwnerDoctor(Slot slot, Long currentDoctorId) {
+        if (slot.getDoctor() == null || !slot.getDoctor().getId().equals(currentDoctorId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Ce créneau n'appartient pas à votre planning.");
+        }
     }
 
     /**

@@ -7,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -24,6 +25,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
         return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    /**
+     * Levée par Spring MVC quand AUCUNE route ne correspond à l'URL demandée
+     * (ex. une route supprimée, ou une faute de frappe côté client). Sans ce handler
+     * dédié, elle tombait dans le @ExceptionHandler(Exception.class) générique
+     * ci-dessous et ressortait en 500 "Erreur interne du serveur" — trompeur pour
+     * le client (et pour un test qui vérifie qu'une route supprimée renvoie bien 404).
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoRouteFound(NoResourceFoundException ex) {
+        return buildError(HttpStatus.NOT_FOUND, "Route inexistante.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -6,6 +6,7 @@ import com.rdvmedic.rdv_api.model.Patient;
 import com.rdvmedic.rdv_api.model.User;
 import com.rdvmedic.rdv_api.repository.UserRepository;
 import com.rdvmedic.rdv_api.security.UserPrincipal;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class UserController {
     }
 
     @PatchMapping("/users/me")
-    public ResponseEntity<UserProfileDTO> updateProfile(@RequestBody UserProfileDTO dto) {
+    public ResponseEntity<UserProfileDTO> updateProfile(@Valid @RequestBody UserProfileDTO dto) {
         UserPrincipal principal = extractCurrentUser();
         if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 

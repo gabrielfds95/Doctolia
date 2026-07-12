@@ -92,25 +92,9 @@ class SlotControllerTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
-    // ─── GET /slots/{idDoctor}/{idPatient} ─────────────────────────────────────
-
-    @Test
-    void getSlotsByDoctorAndPatient_returnsList() throws Exception {
-        when(slotService.getSlotsByDoctorIdAndPatientId(1L, 2L)).thenReturn(List.of(buildSlot(5L, 1L, 2L)));
-
-        mockMvc.perform(get("/slots/1/2"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].slotReason").value("Bilan annuel"));
-    }
-
-    @Test
-    void getSlotsByDoctorAndPatient_returns404WhenEmpty() throws Exception {
-        when(slotService.getSlotsByDoctorIdAndPatientId(99L, 99L)).thenReturn(List.of());
-
-        mockMvc.perform(get("/slots/99/99"))
-                .andExpect(status().isNotFound());
-    }
+    // GET /slots/{idDoctor}/{idPatient} a été supprimé (voir AUDIT-SECURITE.md, faille 1) :
+    // le test de non-régression correspondant (404 attendu) est dans SecurityRegressionTest,
+    // pas ici — cette classe teste le routing, pas la sécurité.
 
     // ─── POST /slot/{idDoctor}/{idPatient} ─────────────────────────────────────
 
@@ -145,11 +129,22 @@ class SlotControllerTest {
 
     @Test
     void deleteSlot_returns204() throws Exception {
-        doNothing().when(slotService).deleteSlot(5L);
+        // deleteSlot vérifie l'ownership : il faut un médecin authentifié dans le
+        // SecurityContext (même mécanisme que JwtAuthenticationFilter en réel).
+        UserPrincipal mockDoctor = new UserPrincipal(1L, "doc.test", "doc@hopital.fr", "secret",
+                true, List.of(new SimpleGrantedAuthority("ROLE_DOCTOR")));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(mockDoctor, null, mockDoctor.getAuthorities()));
 
-        mockMvc.perform(delete("/slot/5"))
-                .andExpect(status().isNoContent());
+        try {
+            doNothing().when(slotService).deleteSlot(5L, 1L);
 
-        verify(slotService, times(1)).deleteSlot(5L);
+            mockMvc.perform(delete("/slot/5"))
+                    .andExpect(status().isNoContent());
+
+            verify(slotService, times(1)).deleteSlot(5L, 1L);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 }

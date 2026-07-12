@@ -1,6 +1,7 @@
 package com.rdvmedic.rdv_api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rdvmedic.rdv_api.dto.PatientCreateDTO;
 import com.rdvmedic.rdv_api.model.Patient;
 import com.rdvmedic.rdv_api.security.CustomUserDetailsService;
 import com.rdvmedic.rdv_api.security.JwtTokenProvider;
@@ -81,11 +82,23 @@ class PatientControllerTest {
     @Test
     void createPatient_returns201() throws Exception {
         Patient saved = buildPatient(1L, "jean.dupont");
-        when(patientService.newPatient(any(Patient.class))).thenReturn(saved);
+        when(patientService.newPatient(any(PatientCreateDTO.class))).thenReturn(saved);
+
+        PatientCreateDTO input = PatientCreateDTO.builder()
+                .username("jean.dupont")
+                .email("jean.dupont@mail.com")
+                .password("password123") // >= 8 caractères (voir @Size sur PatientCreateDTO)
+                .firstName("Jean")
+                .lastName("Dupont")
+                .ssn("123456789")
+                .phoneNumber("0600000000")
+                .address("12 rue de la Paix")
+                .age(35)
+                .build();
 
         mockMvc.perform(post("/patient")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(buildPatient(null, "jean.dupont"))))
+                        .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.username").value("jean.dupont"));

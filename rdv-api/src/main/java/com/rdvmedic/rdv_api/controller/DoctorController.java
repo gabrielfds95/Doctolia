@@ -1,7 +1,7 @@
 package com.rdvmedic.rdv_api.controller;
 
 import com.rdvmedic.rdv_api.dto.DoctorDTO;
-import com.rdvmedic.rdv_api.dto.SlotDTO;
+import com.rdvmedic.rdv_api.dto.PublicSlotDTO;
 import com.rdvmedic.rdv_api.exception.ResourceNotFoundException;
 import com.rdvmedic.rdv_api.service.DoctorService;
 import com.rdvmedic.rdv_api.service.SlotService;
@@ -35,10 +35,12 @@ public class DoctorController {
                 .orElseThrow(() -> new ResourceNotFoundException("Médecin introuvable : " + idDoctor));
     }
 
+    // PublicSlotDTO (pas SlotDTO) : endpoint public (permitAll), ne doit jamais
+    // exposer l'identité ou les données médicales du patient (voir AUDIT-SECURITE.md).
     @GetMapping("/doctors/{idDoctor}/slots")
-    public List<SlotDTO> getSlotsByDoctor(@PathVariable Long idDoctor) {
+    public List<PublicSlotDTO> getSlotsByDoctor(@PathVariable Long idDoctor) {
         return slotService.getSlotsByDoctor(idDoctor).stream()
-                .map(SlotDTO::fromEntity)
+                .map(PublicSlotDTO::fromEntity)
                 .toList();
     }
 
