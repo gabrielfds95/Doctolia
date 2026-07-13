@@ -13,8 +13,10 @@ Projet **Angular + Spring Boot** : Application complète de gestion de rendez-vo
 - [API REST](#api-rest)
 - [Sécurité & Authentification](#sécurité--authentification)
 - [Dépendances Maven](#dépendances-maven)
-- [Phases de Développement](#phases-de-développement)
+- [État du projet](#-état-du-projet-à-jour-fin-de-session-de-certification)
 - [Installation & Démarrage](#-installation--démarrage)
+- [Déploiement (profils Spring + Docker)](#-déploiement-profils-spring--docker)
+- [Guide de test manuel via l'API (curl)](#-guide-de-test-manuel-via-lapi-curl)
 
 ---
 
@@ -178,76 +180,51 @@ Le système doit gérer :
 │   PATIENT   │
 └──────┬──────┘
        │
-       ├─→ 1. Visualise la liste des médecins ➜ GET /api/doctors
+       ├─→ 1. Visualise la liste des médecins ➜ GET /doctors
        │
-       ├─→ 2. Sélectionne un médecin et voit ses créneaux ➜ GET /api/doctors/{id}/slots
+       ├─→ 2. Sélectionne un médecin et voit ses créneaux ➜ GET /doctors/{id}/slots
        │
-       ├─→ 3. Choisit un créneau et réserve ➜ POST /api/reservations
+       ├─→ 3. Choisit un créneau et réserve ➜ POST /slot/{idDoctor}
        │
-       └─→ 4. Confirmation : RDV créé ✅
+       └─→ 4. Confirmation : RDV créé (201) ✅
        
 ┌──────────────┐
 │   BACKEND    │
 └──────┬───────┘
        │
-       ├─→ Vérifie la disponibilité du créneau
+       ├─→ Vérifie que le médecin existe et est actif (404/403 sinon)
        │
-       ├─→ Valide les données du patient
+       ├─→ Vérifie l'absence de conflit horaire (409 sinon)
        │
-       ├─→ Crée l'objet Slot avec patient_id
+       ├─→ Crée le Slot : doctor + patient (id extrait du JWT) + status=RESERVED
        │
-       └─→ Retourne confirmation avec JWT token
+       └─→ Retourne le SlotDTO créé (201 Created)
 ```
+Séquence détaillée (avec les branches d'erreur) : [`docs/sequence-diagram-booking.puml`](docs/sequence-diagram-booking.puml).
 
 ---
 
 ## 🔌 API REST
 
-### 🔐 Authentification
+⚠️ Aucun préfixe `/api/` — tous les endpoints sont à la racine (`http://localhost:9000/...`).
+
+**Liste exhaustive et à jour (25 endpoints, méthode/URI/rôle/ownership)** : voir [`docs/endpoints.md`](docs/endpoints.md) — généré et vérifié directement depuis le code (`grep` sur toutes les annotations `@*Mapping`), c'est la seule source fiable. Un résumé rapide :
 
 ```bash
-POST   /api/auth/register          # Inscription (Patient/Doctor)
-POST   /api/auth/login             # Connexion (JWT)
-POST   /api/auth/refresh           # Rafraîchir token
-POST   /api/auth/logout            # Déconnexion
-```
-
-### 👨‍⚕️ Médecins
-
-```bash
-GET    /api/doctors                # Liste des médecins
-GET    /api/doctors/{id}           # Détails d'un médecin
-GET    /api/doctors/{id}/slots     # Créneaux d'un médecin
-POST   /api/doctors/{id}/slots     # Ajouter un créneau (DOCTOR)
-DELETE /api/slots/{id}             # Supprimer un créneau (DOCTOR)
-PUT    /api/slots/{id}             # Modifier un créneau (DOCTOR)
-```
-
-### 🧑‍🤝‍🧑 Patients
-
-```bash
-GET    /api/patients/me            # Profil du patient connecté
-PUT    /api/patients/me            # Mettre à jour profil
-GET    /api/patients/{id}/slots    # Rendez-vous du patient
-```
-
-### 📅 Rendez-vous (Slots)
-
-```bash
-GET    /api/slots                  # Tous les créneaux (Admin)
-GET    /api/slots/{id}             # Détails créneau
-POST   /api/slots                  # Créer créneau (DOCTOR)
-PUT    /api/slots/{id}             # Modifier créneau (DOCTOR)
-DELETE /api/slots/{id}             # Supprimer créneau (DOCTOR)
-PUT    /api/slots/{id}/cancel      # Annuler rendez-vous (PATIENT/DOCTOR)
-```
-
-### 📄 Documents
-
-```bash
-GET    /api/documents              # Documents du patient connecté
-POST   /api/documents              # Uploader document
-DELETE /api/documents/{id}         # Supprimer document
+POST   /login                      # Connexion → JWT
+POST   /register                   # Inscription patient (actif) ou médecin (en attente admin)
+GET    /doctors                    # Liste publique des médecins
+GET    /doctors/{id}/slots         # Calendrier public d'un médecin (sans données patient)
+POST   /slot/{idDoctor}            # PATIENT : réserver un créneau
+GET    /patients/me/slots          # PATIENT : mes rendez-vous
+PATCH  /slots/{id}/cancel          # PATIENT : annuler (ownership vérifié)
+GET    /doctors/me/slots           # DOCTOR : mon planning
+POST   /doctors/me/slots           # DOCTOR : ajouter une indisponibilité
+PUT    /slots/{id}/complete        # DOCTOR : marquer terminé (ownership vérifié)
+GET    /slots/{id}/messages        # Chat du RDV (2 participants uniquement)
+POST   /slots/{id}/messages        # Chat du RDV (2 participants uniquement)
+GET    /admin/doctors/pending      # ADMIN : médecins en attente
+PUT    /admin/doctors/{id}/approve # ADMIN : valider un médecin
 ```
 
 ---
@@ -256,41 +233,35 @@ DELETE /api/documents/{id}         # Supprimer document
 
 ### 🔐 Spring Security
 
-- **Authentification** : Username/Email + Password (BCrypt)
-- **Autorisation** : Rôles basés (ROLE_PATIENT, ROLE_DOCTOR)
-- **Stateless** : Pas de session (JWT tokens)
+- **Authentification** : username + password (BCrypt, 10 rounds)
+- **Autorisation** : par rôle (`hasRole`) déclarée dans `SecurityConfig`, + contrôle d'ownership dans les services pour les actions sur une ressource précise (voir `AUDIT-SECURITE.md`)
+- **Stateless** : `SessionCreationPolicy.STATELESS`, pas de session HTTP côté serveur
 
-### 🎫 JWT (JSON Web Token)
+### 🎫 JWT — structure réelle (vérifiée par décodage d'un vrai token)
 
 ```json
 {
-  "header": {
-    "alg": "HS512",
-    "typ": "JWT"
-  },
+  "header": { "alg": "HS384" },
   "payload": {
-    "sub": "user_id",
-    "username": "patient@example.com",
-    "roles": ["ROLE_PATIENT"],
-    "iat": 1708150800,
-    "exp": 1708237200
-  },
-  "signature": "..."
+    "sub": "pat.marc",
+    "userId": 4,
+    "roles": "ROLE_PATIENT",
+    "iat": 1783866501,
+    "exp": 1783867401
+  }
 }
 ```
 
-**Durée de vie** : 
-- Access Token : 24 heures
-- Refresh Token : 7 jours
+- **Durée de vie** : 15 minutes (`app.jwt.expiration=900000` ms). Pas de refresh token (le champ `refreshToken` existe dans la réponse JSON mais vaut toujours `null` — aucun endpoint `/refresh` n'existe).
+- **Secret** : `${JWT_SECRET:valeur-par-défaut-dev}` — voir `CARNET-JUSTIFICATIONS.md` pour la justification de ce pattern et le garde-fou anti-oubli en prod.
 
-### 🛡️ Endpoints Protégés
+### 🛡️ Endpoints protégés
 
-```
-Tout endpoint nécessite un header :
-Authorization: Bearer <JWT_TOKEN>
+```bash
+Authorization: Bearer <JWT>
 
-Exemple avec curl :
-curl -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc..." https://api.example.com/api/doctors
+# Exemple :
+curl -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9..." http://localhost:9000/patients/me/slots
 ```
 
 ---
@@ -339,55 +310,19 @@ curl -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc..." https://api.example.c
 
 ---
 
-## 📅 Phases de Développement
+## 📅 État du projet (à jour, fin de session de certification)
 
-### Phase 1️⃣ : Infrastructure & Sécurité ⏳ **EN COURS**
+Cette section a longtemps décrit une feuille de route qui ne correspondait plus au code réel — remplacée par un état des lieux factuel. Le détail complet (failles corrigées, justifications, diagrammes) vit dans des documents dédiés, pas ici, pour ne pas se re-périmer :
 
-**Objectif** : Mettre en place les bases de Spring Security et JWT
+| Sujet | Document |
+|---|---|
+| Sécurité (4 failles corrigées + preuves avant/après) | [`AUDIT-SECURITE.md`](AUDIT-SECURITE.md) |
+| Justifications techniques (Q/R pour l'oral) | [`CARNET-JUSTIFICATIONS.md`](CARNET-JUSTIFICATIONS.md) |
+| Diagrammes UML (cas d'usage, classes, séquence, déploiement) | [`docs/`](docs/) |
+| Schéma relationnel (dictionnaire de données) | [`docs/schema-relationnel.md`](docs/schema-relationnel.md) |
+| Table consolidée des 25 endpoints | [`docs/endpoints.md`](docs/endpoints.md) |
 
-- [x] Créer l'entité `User` (classe mère)
-- [x] Créer l'entité `Role` pour Spring Security
-- [x] Modifier `Patient` et `Doctor` pour hériter de `User`
-- [x] Ajouter l'entité `Document`
-- [x] Configurer Spring Security
-- [x] Implémenter JwtTokenProvider
-- [x] Créer AuthController (login/register)
-- [x] Créer AuthService
-- [ ] Tests d'authentification
-
-**Dépendances** :
-- Spring Security 6
-- JJWT 0.12.5
-- Jakarta Bean Validation
-
-### Phase 2️⃣ : Réimplémentation des Services Existants
-
-**Objectif** : Adapter les services existants avec la nouvelle architecture sécurisée
-
-- [ ] Refactoriser `DoctorService`
-- [ ] Refactoriser `PatientService`
-- [ ] Refactoriser `SlotService`
-- [ ] Implémenter les contrôles d'accès
-
-### Phase 3️⃣ : Frontend Angular
-
-**Objectif** : Créer l'interface utilisateur Angular
-
-- [ ] Service d'authentification Angular
-- [ ] Guard pour les routes protégées
-- [ ] Formulaires d'inscription/connexion
-- [ ] Liste des médecins
-- [ ] Réservation de créneau
-- [ ] Gestion des rendez-vous
-
-### Phase 4️⃣ : Tests & Documentation
-
-**Objectif** : Couvrir de tests et documenter l'API
-
-- [ ] Tests unitaires (JUnit 5)
-- [ ] Tests d'intégration
-- [ ] Swagger/OpenAPI (optionnel)
-- [ ] Documentation des endpoints
+**Résumé** : sécurité (JWT, ownership, deny-by-default, DTO d'entrée) traitée en profondeur ; chat temps réel implémenté en MongoDB (composant NoSQL du référentiel) avec ownership équivalente ; déploiement via profils Spring `dev`/`prod` + Docker Compose (API + PostgreSQL + MongoDB) + CI GitHub Actions. Portails patient/médecin/admin (Phase 2 du plan initial) traités en parallèle côté Angular — voir la racine du monorepo pour l'état détaillé front/back. `DocumentController` et le WebSocket temps réel du chat restent hors périmètre, assumé.
 
 ---
 
@@ -487,69 +422,80 @@ Fichier : [`.github/workflows/rdv-api-ci.yml`](../.github/workflows/rdv-api-ci.y
 
 ---
 
-## 📝 Exemple d'Authentification
+## 🧪 Guide de test manuel via l'API (curl)
 
-### 1️⃣ Inscription Patient
+Suite de commandes **réellement exécutables** telles quelles (copier-coller), contre un serveur lancé en local (`./mvnw spring-boot:run`, profil `dev`/H2). Utilise les comptes de démo créés par `DataInitializer` (mot de passe `password` pour tous).
 
-```bash
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "username": "patient@example.com",
-  "email": "patient@example.com",
-  "password": "SecurePass123!",
-  "firstName": "Jean",
-  "lastName": "Dupont",
-  "userType": "PATIENT"
-}
-
-✅ Réponse :
-{
-  "id": 1,
-  "username": "patient@example.com",
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refreshToken": "eyJ0eXAiOiJKV1QiLCJhbGc..."
-}
-```
-
-### 2️⃣ Connexion
+### 1️⃣ Connexion et récupération du token
 
 ```bash
-POST /api/auth/login
-Content-Type: application/json
+curl -s -X POST http://localhost:9000/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"pat.marc","password":"password"}'
 
-{
-  "username": "patient@example.com",
-  "password": "SecurePass123!"
-}
-
-✅ Réponse :
-{
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refreshToken": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "expiresIn": 86400
-}
+# Réponse réelle (extrait) :
+# {"id":4,"username":"pat.marc","token":"eyJhbGciOiJIUzM4NCJ9...","expiresIn":900000,"roles":["ROLE_PATIENT"]}
 ```
 
-### 3️⃣ Accès aux Ressources Protégées
+Pour la suite, exporte le token dans une variable :
+```bash
+TOKEN=$(curl -s -X POST http://localhost:9000/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"pat.marc","password":"password"}' | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])")
+```
+
+### 2️⃣ Réserver un créneau (accès public + réservation authentifiée)
 
 ```bash
-GET /api/doctors
-Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
+# Voir les créneaux disponibles chez un médecin (public, sans token)
+curl -s http://localhost:9000/doctors/2/slots
 
-✅ Réponse :
-[
-  {
-    "id": 1,
-    "firstName": "Marie",
-    "lastName": "Dupuis",
-    "speciality": "Cardiologie",
-    "department": "Cardiologie",
-    "experience": 10
-  }
-]
+# Réserver (PATIENT authentifié) — id du patient pris du JWT, jamais du body
+curl -s -X POST http://localhost:9000/slot/2 \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"slotDate":"2026-08-01","slotTime":"09:00:00","endTime":"09:30:00","slotReason":"Consultation test"}'
 ```
+
+### 3️⃣ Démontrer l'ownership (le cœur de la sécurité)
+
+```bash
+# pat.marc annule SON PROPRE rdv (remplacer {id} par l'id retourné à l'étape 2) → 200
+curl -s -i -X PATCH http://localhost:9000/slots/{id}/cancel -H "Authorization: Bearer $TOKEN"
+
+# pat.jean (un AUTRE patient) tente d'annuler le même rdv → 403 attendu
+TOKEN_JEAN=$(curl -s -X POST http://localhost:9000/login -H "Content-Type: application/json" \
+  -d '{"username":"pat.jean","password":"password"}' | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])")
+curl -s -i -X PATCH http://localhost:9000/slots/{id}/cancel -H "Authorization: Bearer $TOKEN_JEAN"
+# → 403 Forbidden "Ce créneau ne vous appartient pas."
+```
+
+### 4️⃣ Chat d'un RDV — ⚠️ pas d'écran Angular pour ça (voir plus bas), testable uniquement via l'API
+
+Nécessite MongoDB démarré (`docker compose up -d mongo`) :
+
+```bash
+curl -s -X POST http://localhost:9000/slots/1/messages \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"content":"Bonjour docteur"}'
+
+curl -s http://localhost:9000/slots/1/messages -H "Authorization: Bearer $TOKEN"
+```
+
+### 5️⃣ Inscription médecin + validation admin
+
+```bash
+# Inscription médecin → enabled=false, pas de token retourné
+curl -s -X POST http://localhost:9000/register -H "Content-Type: application/json" \
+  -d '{"username":"doc.test","email":"doc.test@mail.com","password":"password123","firstName":"Test","lastName":"Doc","userType":"DOCTOR","speciality":"Généraliste","licenseNumber":"LIC-TEST","department":"Général","experienceYears":3}'
+
+# Connexion admin puis validation
+TOKEN_ADMIN=$(curl -s -X POST http://localhost:9000/login -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password"}' | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])")
+curl -s http://localhost:9000/admin/doctors/pending -H "Authorization: Bearer $TOKEN_ADMIN"
+curl -s -X PUT http://localhost:9000/admin/doctors/{id}/approve -H "Authorization: Bearer $TOKEN_ADMIN"
+```
+
+Plus d'exemples (tous les rôles, toutes les branches d'erreur) : `AUDIT-SECURITE.md` contient des dizaines de requêtes réelles avec leurs réponses exactes.
 
 ---
 

@@ -1,122 +1,88 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
-import { Conversation, Message } from '../../model/message.model';
-
-// TODO: remplacer les données en dur par un appel à l'API MessageService
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: 1,
-    participantId: 10,
-    participantName: 'Dr. Sophie Martin',
-    participantRole: 'DOCTOR',
-    participantInitials: 'SM',
-    lastMessage: 'Bonjour, vos résultats sont bons. Pas d\'inquiétude.',
-    lastMessageAt: '2026-03-24T14:30:00',
-    unreadCount: 1,
-    messages: [
-      { id: 1, senderId: 1, senderName: 'Moi', content: 'Bonjour Docteur, j\'ai reçu mes résultats d\'analyse. Pouvez-vous me les expliquer ?', sentAt: '2026-03-24T14:10:00', read: true },
-      { id: 2, senderId: 10, senderName: 'Dr. Sophie Martin', content: 'Bonjour, vos résultats sont bons. Pas d\'inquiétude.', sentAt: '2026-03-24T14:30:00', read: false },
-    ]
-  },
-  {
-    id: 2,
-    participantId: 11,
-    participantName: 'Dr. Jean Dupont',
-    participantRole: 'DOCTOR',
-    participantInitials: 'JD',
-    lastMessage: 'Votre prochain rendez-vous est confirmé pour le 3 avril.',
-    lastMessageAt: '2026-03-23T09:15:00',
-    unreadCount: 0,
-    messages: [
-      { id: 3, senderId: 11, senderName: 'Dr. Jean Dupont', content: 'Votre prochain rendez-vous est confirmé pour le 3 avril.', sentAt: '2026-03-23T09:15:00', read: true },
-    ]
-  },
-  {
-    id: 3,
-    participantId: 12,
-    participantName: 'Dr. Amina Benali',
-    participantRole: 'DOCTOR',
-    participantInitials: 'AB',
-    lastMessage: 'N\'oubliez pas de prendre vos médicaments le matin.',
-    lastMessageAt: '2026-03-20T11:00:00',
-    unreadCount: 0,
-    messages: [
-      { id: 4, senderId: 1, senderName: 'Moi', content: 'Docteur, j\'ai oublié mes prescriptions. Pouvez-vous me les rappeler ?', sentAt: '2026-03-20T10:45:00', read: true },
-      { id: 5, senderId: 12, senderName: 'Dr. Amina Benali', content: 'N\'oubliez pas de prendre vos médicaments le matin.', sentAt: '2026-03-20T11:00:00', read: true },
-    ]
-  }
-];
+import { ActivatedRoute } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
+import { Message } from '../../model/message.model';
 
 @Component({
   selector: 'app-messagerie',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './messagerie.component.html',
   styleUrls: ['./messagerie.component.scss']
 })
 export class MessagerieComponent implements OnInit {
 
-  conversations: Conversation[] = MOCK_CONVERSATIONS;
-  activeConversation: Conversation | null = null;
+  slotId!: number;
+  messages: Message[] = [];
   newMessage = '';
 
-  constructor(private route: ActivatedRoute) {}
+  loading = true;
+  sending = false;
+  // Séparés car ils pilotent des affichages différents :
+  // loadError bloque tout le fil (RDV inaccessible), sendError n'est qu'un bandeau ponctuel.
+  loadError = '';
+  sendError = '';
+
+  constructor(
+    private route: ActivatedRoute,
+    private apiService: ApiService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
-    const p = this.route.snapshot.queryParams;
-    if (p['doctorId']) {
-      const doctorId = Number(p['doctorId']);
-      let conv = this.conversations.find(c => c.participantId === doctorId) ?? null;
-      if (!conv) {
-        // Crée la conversation si elle n'existe pas encore
-        conv = {
-          id:               Date.now(),
-          participantId:    doctorId,
-          participantName:  p['doctorName'] ?? 'Médecin',
-          participantRole:  'DOCTOR',
-          participantInitials: p['doctorInitials'] ?? '?',
-          lastMessage:      '',
-          lastMessageAt:    new Date().toISOString(),
-          unreadCount:      0,
-          messages:         []
-        };
-        this.conversations.unshift(conv);
-      }
-      this.selectConversation(conv);
-    }
+    // Le fil est fixé au slotId de la route pour toute la durée de vie du composant
+    // (on revient sur /mes-rdv ou /mon-planning pour changer de RDV, pas de navigation interne).
+    this.slotId = Number(this.route.snapshot.paramMap.get('slotId'));
+    this.loadMessages();
   }
 
-  selectConversation(conv: Conversation): void {
-    this.activeConversation = conv;
-    // Marquer comme lu
-    conv.unreadCount = 0;
-    conv.messages.forEach(m => m.read = true);
+  loadMessages(): void {
+    this.loading = true;
+    this.loadError = '';
+    this.apiService.getSlotMessages(this.slotId).subscribe({
+      next: (messages) => {
+        this.messages = messages;
+        this.loading = false;
+      },
+      error: (err: HttpErrorResponse) => {
+        this.loadError = this.errorLabel(err.status, 'charger');
+        this.loading = false;
+      }
+    });
   }
 
   sendMessage(): void {
-    if (!this.newMessage.trim() || !this.activeConversation) return;
-    const msg: Message = {
-      id: Date.now(),
-      senderId: 1,
-      senderName: 'Moi',
-      content: this.newMessage.trim(),
-      sentAt: new Date().toISOString(),
-      read: true
-    };
-    this.activeConversation.messages.push(msg);
-    this.activeConversation.lastMessage = msg.content;
-    this.activeConversation.lastMessageAt = msg.sentAt;
-    this.newMessage = '';
-    // TODO: appeler MessageService.send(activeConversation.id, msg.content)
+    const content = this.newMessage.trim();
+    if (!content || this.sending) return;
+
+    this.sending = true;
+    this.sendError = '';
+    this.apiService.sendSlotMessage(this.slotId, content).subscribe({
+      next: () => {
+        this.newMessage = '';
+        this.sending = false;
+        // Recharge depuis le serveur plutôt qu'un ajout optimiste : on affiche
+        // exactement ce que le back a enregistré (id Mongo, sentAt serveur).
+        this.loadMessages();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.sendError = this.errorLabel(err.status, 'envoyer');
+        this.sending = false;
+      }
+    });
   }
 
-  get totalUnread(): number {
-    return this.conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  /**
+   * "C'est moi" est un affichage, pas une autorisation : le back revalide
+   * l'ownership à chaque requête (403 sinon), ceci sert juste à aligner la bulle.
+   */
+  isMine(msg: Message): boolean {
+    return msg.senderId === this.authService.getUserId();
   }
-
-  isMine(msg: Message): boolean { return msg.senderId === 1; }
 
   formatTime(iso: string): string {
     const d = new Date(iso);
@@ -124,6 +90,12 @@ export class MessagerieComponent implements OnInit {
     if (d.toDateString() === today.toDateString()) {
       return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     }
-    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  private errorLabel(status: number, action: 'charger' | 'envoyer'): string {
+    if (status === 403) return "Vous n'êtes pas participant à ce rendez-vous.";
+    if (status === 404) return 'Rendez-vous introuvable.';
+    return action === 'charger' ? 'Impossible de charger les messages.' : "Impossible d'envoyer le message.";
   }
 }

@@ -1,20 +1,11 @@
 export interface Message {
-  id: number;
-  senderId: number;
-  senderName: string;
+  id: string;        // ObjectId MongoDB, pas un number
+  slotId: number;
+  senderId: number;  // à comparer au userId du JWT pour savoir si "c'est moi"
   content: string;
-  sentAt: string; // ISO date string
-  read: boolean;
+  sentAt: string;     // ISO 8601, LocalDateTime Java sans timezone
 }
 
-export interface Conversation {
-  id: number;
-  participantId: number;
-  participantName: string;
-  participantRole: 'DOCTOR' | 'PATIENT';
-  participantInitials: string;
-  lastMessage: string;
-  lastMessageAt: string;
-  unreadCount: number;
-  messages: Message[];
+export interface MessageCreate {
+  content: string;
 }

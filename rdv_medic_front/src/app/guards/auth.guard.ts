@@ -19,16 +19,21 @@ import { AuthService } from '../services/auth.service';
  *     → Router appelle authGuard()
  *       → isAuthenticated() vérifie le token (présence + expiration)
  *         → true  : navigation autorisée → MesRdvComponent chargé
- *         → false : redirection vers /login (createUrlTree retourne une URL)
+ *         → false : session nettoyée (logout) + redirection vers /login (createUrlTree retourne une URL)
  *
  * Note : cette vérification est côté CLIENT uniquement.
  * Même si quelqu'un contournait le guard, le backend rejetterait
  * la requête avec 401 (JwtAuthenticationFilter) → double protection.
  */
 export const authGuard: CanActivateFn = () => {
-  if (inject(AuthService).isAuthenticated()) {
+  const authService = inject(AuthService);
+  if (authService.isAuthenticated()) {
     return true; // autorise la navigation
   }
+  // Token absent/expiré : on vide la session (localStorage + currentUserSubject).
+  // Sans ça, currentUser resterait "vrai" en mémoire — app.html afficherait encore
+  // la sidebar sur la page de login, sur la seule foi d'un localStorage périmé.
+  authService.logout();
   // Retourne une UrlTree → Angular effectue la redirection proprement
   // (plus propre que router.navigate() qui retournerait false)
   return inject(Router).createUrlTree(['/login']);

@@ -77,6 +77,12 @@
             }
 
             <div class="slot-actions">
+              @if (slot.patient) {
+                <button class="btn btn-outline btn-sm" (click)="openMessages(slot)">
+                  <span class="material-symbols-outlined">chat</span>
+                  Message
+                </button>
+              }
               @if (isCompletable(slot)) {
                 <button class="btn btn-outline btn-sm" (click)="completeSlot(slot.id)">
                   <span class="material-symbols-outlined">task_alt</span>

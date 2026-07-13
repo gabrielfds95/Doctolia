@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { Slot } from '../../model/slot.model';
 
@@ -23,7 +24,7 @@ export class MonPlanningComponent implements OnInit {
   form = { slotDate: '', slotTime: '', endTime: '', slotReason: '' };
   formError = '';
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private router: Router) {}
 
   ngOnInit(): void {
     this.loadSlots();
@@ -105,6 +106,10 @@ export class MonPlanningComponent implements OnInit {
       next: () => this.loadSlots(),
       error: () => { this.errorMessage = 'Erreur lors de la mise à jour.'; }
     });
+  }
+
+  openMessages(slot: Slot): void {
+    this.router.navigate(['/rdv', slot.id, 'messages']);
   }
 
   isCompletable(slot: Slot): boolean { return slot.status === 'RESERVED'; }

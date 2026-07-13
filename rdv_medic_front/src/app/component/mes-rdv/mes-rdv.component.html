@@ -78,12 +78,12 @@
                 {{ slot.slotReason }}
               </div>
             }
-            @if (isCancellable(slot)) {
-              <div class="rdv-actions">
-                <button class="btn btn-outline btn-sm" (click)="contactDoctor(slot)">
-                  <span class="material-symbols-outlined">chat</span>
-                  Message
-                </button>
+            <div class="rdv-actions">
+              <button class="btn btn-outline btn-sm" (click)="openMessages(slot)">
+                <span class="material-symbols-outlined">chat</span>
+                Message
+              </button>
+              @if (isCancellable(slot)) {
                 <button class="btn btn-outline btn-sm" (click)="openEditReason(slot)">
                   <span class="material-symbols-outlined">edit</span>
                   Modifier motif
@@ -92,8 +92,8 @@
                   <span class="material-symbols-outlined">cancel</span>
                   Annuler
                 </button>
-              </div>
-            }
+              }
+            </div>
           </div>
         </div>
       }

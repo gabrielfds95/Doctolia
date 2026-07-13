@@ -100,15 +100,8 @@ export class MesRdvComponent implements OnInit {
     return this.slots.filter(s => s.status === status).length;
   }
 
-  contactDoctor(slot: Slot): void {
-    const initials = (slot.doctor.firstName?.[0] ?? '') + (slot.doctor.lastName?.[0] ?? '');
-    this.router.navigate(['/messages'], {
-      queryParams: {
-        doctorId:       slot.doctor.id,
-        doctorName:     `Dr. ${slot.doctor.firstName} ${slot.doctor.lastName}`,
-        doctorInitials: initials.toUpperCase()
-      }
-    });
+  openMessages(slot: Slot): void {
+    this.router.navigate(['/rdv', slot.id, 'messages']);
   }
 
   isCancellable(slot: Slot): boolean {

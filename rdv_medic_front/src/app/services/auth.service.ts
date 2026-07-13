@@ -149,6 +149,23 @@ export class AuthService {
   }
 
   /**
+   * Extrait le userId (id BDD) du claim "userId" du JWT — même décodage que isAuthenticated().
+   * Usage strictement UI (ex: savoir si un message "est le mien") : le back revalide
+   * toujours l'ownership indépendamment, ceci ne sert jamais à autoriser une action.
+   */
+  getUserId(): number | null {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64));
+      return payload.userId ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Charge l'utilisateur depuis localStorage au démarrage de l'app.
    * Appelé une seule fois dans l'initialisation du BehaviorSubject.
    */

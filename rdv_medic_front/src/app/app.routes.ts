@@ -9,7 +9,6 @@ import { MonPlanningComponent } from './component/mon-planning/mon-planning.comp
 import { ProfileComponent } from './component/profile/profile.component';
 import { AdminDashboardComponent } from './component/admin-dashboard/admin-dashboard.component';
 import { MessagerieComponent } from './component/messagerie/messagerie.component';
-import { AssistantIaComponent } from './component/assistant-ia/assistant-ia.component';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin.guard';
 
@@ -21,8 +20,7 @@ export const routes: Routes = [
   { path: 'doctor-slots/:id', component: SlotListComponent, canActivate: [authGuard] },
   { path: 'mes-rdv', component: MesRdvComponent, canActivate: [authGuard] },
   { path: 'mon-planning', component: MonPlanningComponent, canActivate: [authGuard] },
-  { path: 'messages', component: MessagerieComponent, canActivate: [authGuard] },
-  { path: 'assistant', component: AssistantIaComponent, canActivate: [authGuard] },
+  { path: 'rdv/:slotId/messages', component: MessagerieComponent, canActivate: [authGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [authGuard] },
   { path: 'admin', component: AdminDashboardComponent, canActivate: [adminGuard] },
   { path: '**', component: NotFoundComponent }

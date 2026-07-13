@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { Doctor } from '../model/doctor.model';
 import { Slot } from '../model/slot.model';
 import { UserProfile } from '../model/user-profile.model';
+import { Message, MessageCreate } from '../model/message.model';
 
 @Injectable({
   providedIn: 'root' // Rend le service disponible partout dans l'application
@@ -101,6 +102,17 @@ approveDoctor(id: number): Observable<Doctor> {
 
 rejectDoctor(id: number): Observable<void> {
   return this.http.delete<void>(`${this.baseURL}/admin/doctors/${id}/reject`);
+}
+
+// ── Messagerie (par rendez-vous) ──────────────────────────────────────────────
+
+getSlotMessages(slotId: number): Observable<Message[]> {
+  return this.http.get<Message[]>(`${this.baseURL}/slots/${slotId}/messages`);
+}
+
+sendSlotMessage(slotId: number, content: string): Observable<Message> {
+  const body: MessageCreate = { content };
+  return this.http.post<Message>(`${this.baseURL}/slots/${slotId}/messages`, body);
 }
 
 }

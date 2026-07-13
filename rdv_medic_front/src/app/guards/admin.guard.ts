@@ -7,5 +7,11 @@ export const adminGuard: CanActivateFn = () => {
   if (auth.isAuthenticated() && auth.isAdmin()) {
     return true;
   }
+  // Ne vider la session que si le token est réellement invalide/expiré —
+  // un utilisateur connecté mais non-admin ne doit pas être déconnecté,
+  // juste renvoyé loin d'une route qui ne le concerne pas.
+  if (!auth.isAuthenticated()) {
+    auth.logout();
+  }
   return inject(Router).createUrlTree(['/login']);
 };
